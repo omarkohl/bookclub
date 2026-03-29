@@ -22,10 +22,31 @@ make build          # Build frontend + Go binary → bin/bookclub
 make test           # Run all tests
 make lint           # Run all linters
 make fmt            # Format all code
-make dev            # Start Vite dev server (frontend HMR)
+make dev-all        # Start backend + frontend with HMR
 ```
 
-## Running Locally
+## Development (iterating on both frontend and backend)
+
+```sh
+make dev-all
+```
+
+This starts the Go backend on `:8080` and the Vite dev server on `:5173` with HMR. The Vite dev server proxies `/api/*` requests to the Go backend.
+
+- User UI: `http://localhost:5173/club/`
+- Admin UI: `http://localhost:5173/club/admin/admin/`
+
+Uses the default secrets (`club`/`admin`). To use custom secrets:
+
+```sh
+BOOKCLUB_CLUB_SECRET=myclub BOOKCLUB_ADMIN_SECRET=myadmin make dev-backend
+# In another terminal:
+make dev
+```
+
+Then open `http://localhost:5173/myclub/` and `http://localhost:5173/myclub/admin/myadmin/`.
+
+## Running a Production Build Locally
 
 ```sh
 make build
