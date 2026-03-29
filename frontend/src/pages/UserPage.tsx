@@ -47,27 +47,40 @@ export function UserPage({ apiBase }: { apiBase: string }) {
   };
 
   if (isLoading) {
-    return <p>Loading...</p>;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-stone-500">Loading...</p>
+      </div>
+    );
   }
 
   if (participants.length === 0) {
     return (
-      <div>
-        <h1>Book Club</h1>
-        <p>No participants have been added yet. Ask your admin to set up.</p>
+      <div className="mx-auto max-w-md px-4 py-12 text-center">
+        <h1 className="text-2xl font-bold tracking-tight">Book Club</h1>
+        <p className="mt-4 text-stone-500">
+          No participants have been added yet. Ask your admin to set up.
+        </p>
       </div>
     );
   }
 
   if (!selectedParticipant) {
     return (
-      <div>
-        <h1>Book Club</h1>
-        <h2>Who are you?</h2>
-        <ul>
+      <div className="mx-auto max-w-sm px-4 py-12">
+        <h1 className="text-center text-2xl font-bold tracking-tight">
+          Book Club
+        </h1>
+        <h2 className="mt-6 text-center text-stone-500">Who are you?</h2>
+        <ul className="mt-4 space-y-2">
           {participants.map((p) => (
             <li key={p.id}>
-              <button onClick={() => handleSelect(p.id)}>{p.name}</button>
+              <button
+                onClick={() => handleSelect(p.id)}
+                className="w-full rounded-lg border border-stone-200 bg-white px-4 py-3 text-left font-medium transition-colors hover:border-stone-300 hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+              >
+                {p.name}
+              </button>
             </li>
           ))}
         </ul>
@@ -76,12 +89,21 @@ export function UserPage({ apiBase }: { apiBase: string }) {
   }
 
   return (
-    <div>
-      <h1>Book Club</h1>
-      <p>
-        Welcome, {selectedParticipant.name}!{" "}
-        <button onClick={handleSwitch}>Switch user</button>
-      </p>
+    <div className="mx-auto max-w-2xl px-4 py-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight">Book Club</h1>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-stone-500">
+            {selectedParticipant.name}
+          </span>
+          <button
+            onClick={handleSwitch}
+            className="rounded-md px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+          >
+            Switch
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
