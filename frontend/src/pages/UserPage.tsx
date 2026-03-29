@@ -400,6 +400,7 @@ function VotingSection({
     new Map(),
   );
   const [initialized, setInitialized] = useState(false);
+  const [expandedBookId, setExpandedBookId] = useState<number | null>(null);
 
   // Sync local state when saved votes load
   if (!initialized && myVotes.length > 0) {
@@ -509,10 +510,18 @@ function VotingSection({
           const currentCredits = allocations.get(book.id) ?? 0;
           const score = scoreMap.get(book.id);
 
+          const isExpanded = expandedBookId === book.id;
+          const hasDetails = !!book.description || !!book.link;
+
           return (
             <li key={book.id} className="px-4 py-3">
               <div className="flex items-start justify-between">
-                <div className="min-w-0 flex-1">
+                <div
+                  className={`min-w-0 flex-1${hasDetails ? " cursor-pointer" : ""}`}
+                  onClick={() =>
+                    hasDetails && setExpandedBookId(isExpanded ? null : book.id)
+                  }
+                >
                   <p className="font-medium">
                     {book.title}
                     {book.nominated_by === participantId && (
@@ -527,6 +536,26 @@ function VotingSection({
                       Nominated by{" "}
                       {participantMap.get(book.nominated_by) ?? "Unknown"}
                     </p>
+                  )}
+                  {isExpanded && (
+                    <div className="mt-2 space-y-1">
+                      {book.description && (
+                        <p className="text-sm text-stone-600">
+                          {book.description}
+                        </p>
+                      )}
+                      {book.link && (
+                        <a
+                          href={book.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 underline hover:text-blue-800"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {book.link}
+                        </a>
+                      )}
+                    </div>
                   )}
                 </div>
                 <div className="ml-4 flex items-center gap-3">

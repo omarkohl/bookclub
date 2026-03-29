@@ -86,4 +86,49 @@ test.describe("Phase 2: Books & Nominations", () => {
     });
     await expect(backlogSection.getByText("Neuromancer")).toBeVisible();
   });
+
+  test("user clicks book to see description and link", async ({ page }) => {
+    // Setup: nominate a book with description and link
+    await page.goto(server.clubUrl);
+    await page.getByRole("button", { name: "Alice" }).click();
+
+    await page.getByLabel("Book title").fill("Hyperion");
+    await page.getByLabel("Author(s)").fill("Dan Simmons");
+    await page
+      .getByLabel("Description")
+      .fill("A far-future pilgrimage tale");
+    await page.getByLabel("Link").fill("https://example.com/hyperion");
+    await page.getByRole("button", { name: "Nominate" }).click();
+
+    // Book should appear in the voting section
+    const voteSection = page.locator("section").filter({
+      has: page.getByRole("heading", { name: "Vote" }),
+    });
+    const bookItem = voteSection.getByRole("listitem").filter({
+      hasText: "Hyperion",
+    });
+    await expect(bookItem).toBeVisible();
+
+    // Description and link should NOT be visible yet
+    await expect(
+      bookItem.getByText("A far-future pilgrimage tale"),
+    ).not.toBeVisible();
+
+    // Click the book title to expand details
+    await bookItem.getByText("Hyperion", { exact: false }).first().click();
+
+    // Now description and link should be visible
+    await expect(
+      bookItem.getByText("A far-future pilgrimage tale"),
+    ).toBeVisible();
+    await expect(
+      bookItem.getByRole("link", { name: "https://example.com/hyperion" }),
+    ).toBeVisible();
+
+    // Click again to collapse
+    await bookItem.getByText("Hyperion", { exact: false }).first().click();
+    await expect(
+      bookItem.getByText("A far-future pilgrimage tale"),
+    ).not.toBeVisible();
+  });
 });
