@@ -65,14 +65,15 @@ test.describe("Phase 1: Participants & Identity Selection", () => {
 
     // Pick Bob
     await page.getByRole("button", { name: "Bob" }).click();
-    await expect(page.getByText("Welcome, Bob!")).toBeVisible();
+    await expect(page.getByText("Bob")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Switch" })).toBeVisible();
 
     // Refresh — should persist selection
     await page.reload();
-    await expect(page.getByText("Welcome, Bob!")).toBeVisible();
+    await expect(page.getByText("Bob")).toBeVisible();
 
     // Switch user
-    await page.getByRole("button", { name: "Switch user" }).click();
+    await page.getByRole("button", { name: "Switch" }).click();
     await expect(
       page.getByRole("heading", { name: "Who are you?" }),
     ).toBeVisible();
