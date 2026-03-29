@@ -1,20 +1,37 @@
 /**
- * Derive the API base URL from the current page URL.
- *
- * The app is served at /{club_secret}/ and the API lives at /api/{club_secret}/.
- * In dev mode with Vite proxy, we use the VITE_API_BASE env var.
+ * Parse the URL path to extract club and admin secrets.
+ */
+export function getPathSegments(): {
+  clubSecret: string;
+  adminSecret: string | null;
+} {
+  const parts = window.location.pathname.split("/").filter(Boolean);
+  const clubSecret = parts[0] || "";
+  let adminSecret: string | null = null;
+  if (parts[1] === "admin" && parts[2]) {
+    adminSecret = parts[2];
+  }
+  return { clubSecret, adminSecret };
+}
+
+/**
+ * User API base: /api/{club_secret}
  */
 export function getApiBase(): string {
   if (import.meta.env.VITE_API_BASE) {
     return import.meta.env.VITE_API_BASE;
   }
-
-  // In production, derive from the URL path.
-  // URL pattern: /{club_secret}/... or /{club_secret}/admin/{admin_secret}/...
-  const parts = window.location.pathname.split("/").filter(Boolean);
-  if (parts.length === 0) {
-    return "/api";
-  }
-  const clubSecret = parts[0];
+  const { clubSecret } = getPathSegments();
   return `/api/${clubSecret}`;
+}
+
+/**
+ * Admin API base: /api/{club_secret}/admin/{admin_secret}
+ */
+export function getAdminApiBase(): string {
+  if (import.meta.env.VITE_ADMIN_API_BASE) {
+    return import.meta.env.VITE_ADMIN_API_BASE;
+  }
+  const { clubSecret, adminSecret } = getPathSegments();
+  return `/api/${clubSecret}/admin/${adminSecret}`;
 }

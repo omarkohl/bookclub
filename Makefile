@@ -1,4 +1,4 @@
-.PHONY: help build build-frontend build-backend lint lint-frontend lint-backend fmt fmt-check test test-backend test-frontend dev clean
+.PHONY: help build build-frontend build-backend lint lint-frontend lint-backend fmt fmt-check test test-backend test-frontend e2e dev clean
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -36,6 +36,9 @@ test-backend: ## Run Go integration tests
 
 test-frontend: ## Run frontend tests (Vitest)
 	cd frontend && npx vitest run
+
+e2e: build ## Run Playwright e2e tests (builds first)
+	cd frontend && npx playwright test
 
 dev: ## Start Vite dev server (frontend only)
 	cd frontend && npm run dev

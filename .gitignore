@@ -11,6 +11,10 @@ frontend/dist/
 # Embedded frontend (generated during build)
 internal/handler/frontend/
 
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+
 # IDE
 .idea/
 .vscode/

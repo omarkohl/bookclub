@@ -16,11 +16,11 @@ Thin end-to-end slices — each phase results in something a tester can interact
 **Testable:** Visit the URL, see the React app. Docker works.
 
 ## Phase 1: Participants & Identity Selection
-- [ ] Migration: `settings` + `participants` tables; settings migration inserts default row (credit_budget=100, voting_state='open', pins_enabled=false)
-- [ ] Admin API: CRUD participants, get/update settings
-- [ ] Admin UI: bare-bones page at `/{club}/admin/{admin}/` — add/remove participants, see list
-- [ ] User UI: participant picker on `/{club}/` — select who you are, persist in localStorage
-- [ ] Playwright: admin adds participants, user picks their name
+- [x] Migration: `settings` + `participants` tables; settings migration inserts default row (credit_budget=100, voting_state='open', pins_enabled=false)
+- [x] Admin API: CRUD participants, get/update settings
+- [x] Admin UI: bare-bones page at `/{club}/admin/{admin}/` — add/remove participants, see list
+- [x] User UI: participant picker on `/{club}/` — select who you are, persist in localStorage
+- [x] Playwright: admin adds participants, user picks their name
 
 **Testable:** Admin adds participants, user visits and picks their name.
 
