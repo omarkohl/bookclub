@@ -1,14 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 interface Participant {
   id: number;
@@ -73,72 +64,46 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
   };
 
   return (
-    <div className="mx-auto max-w-2xl p-4">
-      <div className="border-b pb-4">
-        <h1 className="text-xl font-semibold">Book Club Admin</h1>
-      </div>
+    <div>
+      <h1>Book Club Admin</h1>
 
-      <div className="mt-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Participants</CardTitle>
-            <CardDescription>
-              Manage who can nominate and vote on books.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <form onSubmit={handleSubmit} className="flex gap-2">
-              <Input
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="Participant name"
-                maxLength={100}
-                aria-label="Participant name"
-                className="flex-1"
-              />
-              <Button type="submit" disabled={createMutation.isPending}>
-                Add
-              </Button>
-            </form>
-            {error && (
-              <p role="alert" className="text-sm text-destructive">
-                {error}
-              </p>
-            )}
+      <h2>Participants</h2>
 
-            {isLoading && (
-              <p className="text-sm text-muted-foreground">Loading...</p>
-            )}
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="Participant name"
+          maxLength={100}
+          aria-label="Participant name"
+        />
+        <button type="submit" disabled={createMutation.isPending}>
+          Add
+        </button>
+      </form>
+      {error && <p role="alert">{error}</p>}
 
-            {participants.length === 0 && !isLoading ? (
-              <p className="text-sm text-muted-foreground">
-                No participants yet. Add some above.
-              </p>
-            ) : (
-              <ul className="divide-y">
-                {participants.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex items-center justify-between py-2"
-                  >
-                    <span className="text-sm">{p.name}</span>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => deleteMutation.mutate(p.id)}
-                      disabled={deleteMutation.isPending}
-                      aria-label={`Remove ${p.name}`}
-                    >
-                      Remove
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {isLoading && <p>Loading...</p>}
+
+      {participants.length === 0 && !isLoading ? (
+        <p>No participants yet. Add some above.</p>
+      ) : (
+        <ul>
+          {participants.map((p) => (
+            <li key={p.id}>
+              {p.name}
+              <button
+                onClick={() => deleteMutation.mutate(p.id)}
+                disabled={deleteMutation.isPending}
+                aria-label={`Remove ${p.name}`}
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
