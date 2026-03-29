@@ -50,11 +50,11 @@ Thin end-to-end slices — each phase results in something a tester can interact
 **Testable:** Users distribute credits across books, see their own allocation. Remaining credits always clearly visible.
 
 ## Phase 4: Voting State & Results
-- [ ] API: toggle voting state (open ↔ revealed)
-- [ ] Freeze nominations when results revealed (reject nominate/delete/replace)
-- [ ] User UI: when revealed — show scores & ranking, lock voting; when open — hide scores, allow voting
-- [ ] Admin UI: toggle button
-- [ ] Playwright: full cycle — nominate → vote → admin reveals → see winner → admin re-opens
+- [x] API: toggle voting state (open ↔ revealed)
+- [x] Freeze nominations when results revealed (reject nominate/delete/replace)
+- [x] User UI: when revealed — show scores & ranking, lock voting; when open — hide scores, allow voting
+- [x] Admin UI: toggle button
+- [x] Playwright: full cycle — nominate → vote → admin reveals → see winner → admin re-opens
 
 **Testable:** Full cycle: nominate → vote → admin reveals → see winner → admin re-opens.
 

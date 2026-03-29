@@ -35,7 +35,7 @@ test-backend: ## Run Go integration tests
 	go test ./... -v
 
 test-frontend: ## Run frontend tests (Vitest)
-	cd frontend && npx vitest run
+	cd frontend && npx vitest run --exclude 'e2e/**' --passWithNoTests
 
 e2e: build ## Run Playwright e2e tests (builds first)
 	cd frontend && npx playwright test

@@ -17,10 +17,43 @@ interface Book {
   status: string;
 }
 
+interface Settings {
+  credit_budget: number;
+  voting_state: string;
+  pins_enabled: boolean;
+}
+
 export function AdminPage({ apiBase }: { apiBase: string }) {
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState("");
   const [error, setError] = useState("");
+
+  const { data: settings } = useQuery<Settings>({
+    queryKey: ["admin", "settings"],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}/settings`);
+      if (!res.ok) throw new Error("Failed to fetch settings");
+      return res.json();
+    },
+  });
+
+  const toggleVotingMutation = useMutation({
+    mutationFn: async (newState: string) => {
+      const res = await fetch(`${apiBase}/settings`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...settings,
+          voting_state: newState,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to update settings");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "settings"] });
+    },
+  });
 
   const { data: participants = [], isLoading } = useQuery<Participant[]>({
     queryKey: ["admin", "participants"],
@@ -113,6 +146,35 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="text-2xl font-bold tracking-tight">Book Club Admin</h1>
+
+      {settings && (
+        <section className="mt-8">
+          <h2 className="text-lg font-semibold">Voting</h2>
+          <div className="mt-3 flex items-center gap-3">
+            <span className="text-sm text-stone-500">
+              Status:{" "}
+              <span className="font-medium text-stone-900">
+                {settings.voting_state === "open"
+                  ? "Voting Open"
+                  : "Results Revealed"}
+              </span>
+            </span>
+            <button
+              onClick={() =>
+                toggleVotingMutation.mutate(
+                  settings.voting_state === "open" ? "revealed" : "open",
+                )
+              }
+              disabled={toggleVotingMutation.isPending}
+              className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
+            >
+              {settings.voting_state === "open"
+                ? "Reveal Results"
+                : "Reopen Voting"}
+            </button>
+          </div>
+        </section>
+      )}
 
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Participants</h2>
