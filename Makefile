@@ -1,4 +1,4 @@
-.PHONY: help build build-frontend build-backend lint lint-frontend lint-backend fmt fmt-check test test-backend test-frontend e2e dev dev-backend dev-all clean
+.PHONY: help build build-frontend build-backend lint lint-frontend lint-backend fmt fmt-check test test-backend test-frontend e2e e2e-headed dev dev-backend dev-all clean
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -39,6 +39,9 @@ test-frontend: ## Run frontend tests (Vitest)
 
 e2e: build ## Run Playwright e2e tests (builds first)
 	cd frontend && npx playwright test
+
+e2e-headed: build ## Run Playwright e2e tests with visible browser
+	cd frontend && npx playwright test --headed
 
 dev: ## Start Vite dev server (frontend only, proxies /api to :8080)
 	cd frontend && npm run dev
