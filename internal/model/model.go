@@ -13,3 +13,14 @@ type Participant struct {
 	Name      string    `json:"name"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+type Book struct {
+	ID          int       `json:"id"`
+	Title       string    `json:"title"`
+	Authors     string    `json:"authors"`
+	Description string    `json:"description,omitempty"`
+	Link        string    `json:"link,omitempty"`
+	NominatedBy *int      `json:"nominated_by"`
+	Status      string    `json:"status"`
+	CreatedAt   time.Time `json:"created_at"`
+}

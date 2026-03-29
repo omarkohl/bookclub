@@ -7,6 +7,16 @@ interface Participant {
   created_at: string;
 }
 
+interface Book {
+  id: number;
+  title: string;
+  authors: string;
+  description?: string;
+  link?: string;
+  nominated_by: number | null;
+  status: string;
+}
+
 export function AdminPage({ apiBase }: { apiBase: string }) {
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState("");
@@ -17,6 +27,15 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
     queryFn: async () => {
       const res = await fetch(`${apiBase}/participants`);
       if (!res.ok) throw new Error("Failed to fetch participants");
+      return res.json();
+    },
+  });
+
+  const { data: books = [] } = useQuery<Book[]>({
+    queryKey: ["admin", "books"],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}/books`);
+      if (!res.ok) throw new Error("Failed to fetch books");
       return res.json();
     },
   });
@@ -56,12 +75,40 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
     },
   });
 
+  const deleteBookMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`${apiBase}/books/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete book");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "books"] });
+    },
+  });
+
+  const moveToBacklogMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`${apiBase}/books/${id}/move-to-backlog`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to move to backlog");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "books"] });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const name = newName.trim();
     if (!name) return;
     createMutation.mutate(name);
   };
+
+  const nominatedBooks = books.filter((b) => b.status === "nominated");
+  const backlogBooks = books.filter((b) => b.status === "backlog");
+  const participantMap = new Map(participants.map((p) => [p.id, p.name]));
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
@@ -115,6 +162,81 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
                   className="rounded-md px-2.5 py-1 text-sm text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 disabled:opacity-50"
                 >
                   Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold">Nominated Books</h2>
+        {nominatedBooks.length === 0 ? (
+          <p className="mt-4 text-sm text-stone-500">No nominations yet.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
+            {nominatedBooks.map((book) => (
+              <li
+                key={book.id}
+                className="flex items-center justify-between px-4 py-3"
+              >
+                <div>
+                  <p className="text-sm font-medium">{book.title}</p>
+                  <p className="text-xs text-stone-500">
+                    {book.authors}
+                    {book.nominated_by && (
+                      <span className="ml-2 text-stone-400">
+                        by {participantMap.get(book.nominated_by) ?? "Unknown"}
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => moveToBacklogMutation.mutate(book.id)}
+                    disabled={moveToBacklogMutation.isPending}
+                    aria-label={`Move ${book.title} to backlog`}
+                    className="rounded-md px-2.5 py-1 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
+                  >
+                    Backlog
+                  </button>
+                  <button
+                    onClick={() => deleteBookMutation.mutate(book.id)}
+                    disabled={deleteBookMutation.isPending}
+                    aria-label={`Delete ${book.title}`}
+                    className="rounded-md px-2.5 py-1 text-sm text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 disabled:opacity-50"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold">Backlog</h2>
+        {backlogBooks.length === 0 ? (
+          <p className="mt-4 text-sm text-stone-500">No books in backlog.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
+            {backlogBooks.map((book) => (
+              <li
+                key={book.id}
+                className="flex items-center justify-between px-4 py-3"
+              >
+                <div>
+                  <p className="text-sm font-medium">{book.title}</p>
+                  <p className="text-xs text-stone-500">{book.authors}</p>
+                </div>
+                <button
+                  onClick={() => deleteBookMutation.mutate(book.id)}
+                  disabled={deleteBookMutation.isPending}
+                  aria-label={`Delete ${book.title}`}
+                  className="rounded-md px-2.5 py-1 text-sm text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 disabled:opacity-50"
+                >
+                  Delete
                 </button>
               </li>
             ))}

@@ -25,18 +25,21 @@ Thin end-to-end slices — each phase results in something a tester can interact
 **Testable:** Admin adds participants, user visits and picks their name.
 
 ## Phase 2: Nominations
-- [ ] Migration: `books` table
-- [ ] API: nominate a book (title, authors, description, link), list nominations
-- [ ] API: delete own nomination (permanent deletion; move-to-backlog added in Phase 7)
-- [ ] UI: nomination form, book list showing current nominations
-- [ ] UI: empty state message when no nominations exist, encouraging user to nominate and tell others
-- [ ] One-active-nomination-per-user enforcement (replacing old nomination deletes the old one and its votes)
-- [ ] Playwright: user nominates, sees nominations, replaces nomination, deletes nomination
+- [x] Migration: `books` table + `votes` table (votes needed for cascade on nomination deletion)
+- [x] API: nominate a book (title, authors, description, link), list nominations
+- [x] API: delete own nomination (permanent deletion; move-to-backlog added in Phase 7)
+- [x] UI: nomination form, book list showing current nominations
+- [x] UI: nomination prompt when user has no active nomination
+- [x] One-active-nomination-per-user enforcement (replacing old nomination moves old to backlog)
+- [x] Admin API: list all books, delete any book, move to backlog, nominate for user
+- [x] Admin UI: nominated books (delete + move-to-backlog), backlog section
+- [x] User API: backlog CRUD, nominate from backlog
+- [x] Playwright: user nominates, sees book list, admin deletes, admin moves to backlog
 
 **Testable:** Users nominate books and see each other's nominations.
 
 ## Phase 3: Voting (Quadratic)
-- [ ] Migration: `votes` table
+- [x] Migration: `votes` table (done in Phase 2)
 - [ ] API: submit votes (credit distribution), get own votes
 - [ ] API: compute QV scores (`SUM(sqrt(credits))`) — only returned when revealed
 - [ ] UI: credit distribution interface with prominent remaining-credits display (budget − sum of allocated, always visible)
@@ -65,18 +68,19 @@ Thin end-to-end slices — each phase results in something a tester can interact
 
 ## Phase 6: Admin Participant & Book Management
 - [ ] API: remove participant (transaction: delete their nomination + its votes, then delete participant; cascade handles their own votes and sessions)
-- [ ] API: admin delete any book permanently
-- [ ] API: admin set nomination for any user (replaces existing nomination, deleting old one + its votes)
-- [ ] Admin UI: participant removal, book deletion, set nomination for user
+- [x] API: admin delete any book permanently (done in Phase 2)
+- [x] API: admin set nomination for any user (done in Phase 2)
+- [ ] Admin UI: participant removal
+- [x] Admin UI: book deletion, set nomination for user (done in Phase 2)
 - [ ] Playwright: admin removes participant, deletes book, sets nomination for user
 
 **Testable:** Admin manages participants and books with proper cascade behavior.
 
 ## Phase 7: Backlog
-- [ ] API: add to backlog, list/search backlog, delete from backlog
-- [ ] API: nominate from backlog (user for self, admin for anyone)
-- [ ] Retrofit nomination deletion/replacement: move to backlog is now also an option in addition to permanent delete
-- [ ] UI: backlog view with search, "nominate this" action
+- [x] API: add to backlog, list backlog, delete from backlog (done in Phase 2)
+- [x] API: nominate from backlog (user for self, admin for anyone) (done in Phase 2)
+- [x] Retrofit nomination deletion/replacement: move to backlog is now also an option (done in Phase 2)
+- [ ] UI: backlog search
 - [ ] Playwright: add to backlog, nominate from backlog, search, replaced nomination appears in backlog
 
 **Testable:** Users manage a shared reading list and nominate from it. Replaced nominations move to backlog.

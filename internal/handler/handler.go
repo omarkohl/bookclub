@@ -3,6 +3,7 @@ package handler
 import (
 	"database/sql"
 	"embed"
+	"errors"
 	"io/fs"
 	"net/http"
 	"strings"
@@ -10,6 +11,29 @@ import (
 	"github.com/omar/bookclub/internal/model"
 	"github.com/omar/bookclub/internal/store"
 )
+
+// parseIDFromPath extracts a numeric ID from the end of a URL path after a prefix.
+func parseIDFromPath(path, prefix string) (int, bool) {
+	idStr := strings.TrimPrefix(path, prefix)
+	if idStr == "" {
+		return 0, false
+	}
+	// Stop at first slash (for sub-paths like /books/1/move-to-backlog)
+	if idx := strings.Index(idStr, "/"); idx >= 0 {
+		idStr = idStr[:idx]
+	}
+	id := 0
+	for _, c := range idStr {
+		if c < '0' || c > '9' {
+			return 0, false
+		}
+		id = id*10 + int(c-'0')
+	}
+	if id == 0 {
+		return 0, false
+	}
+	return id, true
+}
 
 // Static holds the embedded frontend assets.
 //
@@ -22,6 +46,7 @@ func New(db *sql.DB, clubSecret, adminSecret string) http.Handler {
 
 	ps := store.NewParticipantStore(db)
 	ss := store.NewSettingsStore(db)
+	bs := store.NewBookStore(db)
 
 	// API routes.
 	apiPrefix := "/api/" + clubSecret + "/"
@@ -99,23 +124,14 @@ func New(db *sql.DB, clubSecret, adminSecret string) http.Handler {
 			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 			return
 		}
-		// Extract ID from path: .../participants/{id}
-		idStr := strings.TrimPrefix(r.URL.Path, adminPrefix+"participants/")
-		id := 0
-		for _, c := range idStr {
-			if c < '0' || c > '9' {
-				writeError(w, http.StatusBadRequest, "invalid participant ID")
-				return
-			}
-			id = id*10 + int(c-'0')
-		}
-		if id == 0 {
+		id, ok := parseIDFromPath(r.URL.Path, adminPrefix+"participants/")
+		if !ok {
 			writeError(w, http.StatusBadRequest, "invalid participant ID")
 			return
 		}
 		err := ps.Delete(id)
 		if err != nil {
-			if err == sql.ErrNoRows {
+			if errors.Is(err, sql.ErrNoRows) {
 				writeError(w, http.StatusNotFound, "participant not found")
 				return
 			}
@@ -158,6 +174,343 @@ func New(db *sql.DB, clubSecret, adminSecret string) http.Handler {
 		default:
 			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		}
+	})
+
+	// User API: books (nominated).
+	mux.HandleFunc(apiPrefix+"books", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			books, err := bs.ListNominated()
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to list books")
+				return
+			}
+			if books == nil {
+				books = []model.Book{}
+			}
+			writeJSON(w, http.StatusOK, books)
+		case http.MethodPost:
+			settings, err := ss.Get()
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to get settings")
+				return
+			}
+			if settings.VotingState == "revealed" {
+				writeError(w, http.StatusConflict, "nominations are closed while votes are revealed")
+				return
+			}
+			var req struct {
+				Title         string `json:"title"`
+				Authors       string `json:"authors"`
+				Description   string `json:"description"`
+				Link          string `json:"link"`
+				ParticipantID int    `json:"participant_id"`
+			}
+			if err := decodeJSON(r, &req); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid JSON")
+				return
+			}
+			req.Title = strings.TrimSpace(req.Title)
+			req.Authors = strings.TrimSpace(req.Authors)
+			if req.Title == "" {
+				writeError(w, http.StatusBadRequest, "title is required")
+				return
+			}
+			if req.Authors == "" {
+				writeError(w, http.StatusBadRequest, "authors is required")
+				return
+			}
+			if req.ParticipantID == 0 {
+				writeError(w, http.StatusBadRequest, "participant_id is required")
+				return
+			}
+			// If user already has a nomination, move it to backlog first
+			existing, err := bs.GetNominationByParticipant(req.ParticipantID)
+			if err == nil && existing != nil {
+				if err := bs.MoveToBacklog(existing.ID); err != nil {
+					writeError(w, http.StatusInternalServerError, "failed to move old nomination to backlog")
+					return
+				}
+			}
+			book, err := bs.Create(&model.Book{
+				Title:       req.Title,
+				Authors:     req.Authors,
+				Description: req.Description,
+				Link:        req.Link,
+				NominatedBy: &req.ParticipantID,
+				Status:      "nominated",
+			})
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to create nomination")
+				return
+			}
+			writeJSON(w, http.StatusCreated, book)
+		default:
+			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		}
+	})
+
+	// User API: book detail and delete own nomination.
+	mux.HandleFunc(apiPrefix+"books/", func(w http.ResponseWriter, r *http.Request) {
+		// Handle /books/nominate-from-backlog specially
+		if strings.HasSuffix(r.URL.Path, "/nominate-from-backlog") {
+			if r.Method != http.MethodPost {
+				writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+				return
+			}
+			settings, err := ss.Get()
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to get settings")
+				return
+			}
+			if settings.VotingState == "revealed" {
+				writeError(w, http.StatusConflict, "nominations are closed while votes are revealed")
+				return
+			}
+			var req struct {
+				BookID        int `json:"book_id"`
+				ParticipantID int `json:"participant_id"`
+			}
+			if err := decodeJSON(r, &req); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid JSON")
+				return
+			}
+			if req.BookID == 0 || req.ParticipantID == 0 {
+				writeError(w, http.StatusBadRequest, "book_id and participant_id are required")
+				return
+			}
+			book, err := bs.NominateFromBacklog(req.BookID, req.ParticipantID)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					writeError(w, http.StatusNotFound, "book not found in backlog")
+					return
+				}
+				writeError(w, http.StatusInternalServerError, "failed to nominate from backlog")
+				return
+			}
+			writeJSON(w, http.StatusOK, book)
+			return
+		}
+
+		id, ok := parseIDFromPath(r.URL.Path, apiPrefix+"books/")
+		if !ok {
+			writeError(w, http.StatusBadRequest, "invalid book ID")
+			return
+		}
+		switch r.Method {
+		case http.MethodGet:
+			book, err := bs.GetByID(id)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					writeError(w, http.StatusNotFound, "book not found")
+					return
+				}
+				writeError(w, http.StatusInternalServerError, "failed to get book")
+				return
+			}
+			writeJSON(w, http.StatusOK, book)
+		case http.MethodDelete:
+			settings, err := ss.Get()
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to get settings")
+				return
+			}
+			if settings.VotingState == "revealed" {
+				writeError(w, http.StatusConflict, "cannot delete nominations while votes are revealed")
+				return
+			}
+			book, err := bs.GetByID(id)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					writeError(w, http.StatusNotFound, "book not found")
+					return
+				}
+				writeError(w, http.StatusInternalServerError, "failed to get book")
+				return
+			}
+			if book.Status != "nominated" {
+				writeError(w, http.StatusBadRequest, "can only delete nominations via this endpoint")
+				return
+			}
+			if err := bs.Delete(id); err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to delete book")
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		}
+	})
+
+	// User API: backlog.
+	mux.HandleFunc(apiPrefix+"backlog", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			books, err := bs.ListBacklog()
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to list backlog")
+				return
+			}
+			if books == nil {
+				books = []model.Book{}
+			}
+			writeJSON(w, http.StatusOK, books)
+		case http.MethodPost:
+			var req struct {
+				Title       string `json:"title"`
+				Authors     string `json:"authors"`
+				Description string `json:"description"`
+				Link        string `json:"link"`
+			}
+			if err := decodeJSON(r, &req); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid JSON")
+				return
+			}
+			req.Title = strings.TrimSpace(req.Title)
+			req.Authors = strings.TrimSpace(req.Authors)
+			if req.Title == "" {
+				writeError(w, http.StatusBadRequest, "title is required")
+				return
+			}
+			if req.Authors == "" {
+				writeError(w, http.StatusBadRequest, "authors is required")
+				return
+			}
+			book, err := bs.Create(&model.Book{
+				Title:       req.Title,
+				Authors:     req.Authors,
+				Description: req.Description,
+				Link:        req.Link,
+				Status:      "backlog",
+			})
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to add to backlog")
+				return
+			}
+			writeJSON(w, http.StatusCreated, book)
+		default:
+			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		}
+	})
+
+	// Admin API: books (all).
+	mux.HandleFunc(adminPrefix+"books", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			books, err := bs.ListAll()
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to list books")
+				return
+			}
+			if books == nil {
+				books = []model.Book{}
+			}
+			writeJSON(w, http.StatusOK, books)
+		default:
+			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		}
+	})
+
+	// Admin API: book operations (delete, move-to-backlog, nominate-for-user).
+	mux.HandleFunc(adminPrefix+"books/", func(w http.ResponseWriter, r *http.Request) {
+		// Handle /books/nominate-for-user
+		if strings.HasSuffix(r.URL.Path, "/nominate-for-user") {
+			if r.Method != http.MethodPost {
+				writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+				return
+			}
+			var req struct {
+				BookID        *int   `json:"book_id"`
+				Title         string `json:"title"`
+				Authors       string `json:"authors"`
+				ParticipantID int    `json:"participant_id"`
+			}
+			if err := decodeJSON(r, &req); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid JSON")
+				return
+			}
+			if req.ParticipantID == 0 {
+				writeError(w, http.StatusBadRequest, "participant_id is required")
+				return
+			}
+			// Move existing nomination to backlog
+			existing, err := bs.GetNominationByParticipant(req.ParticipantID)
+			if err == nil && existing != nil {
+				if err := bs.MoveToBacklog(existing.ID); err != nil {
+					writeError(w, http.StatusInternalServerError, "failed to move old nomination")
+					return
+				}
+			}
+			if req.BookID != nil {
+				// Nominate existing book from backlog
+				book, err := bs.NominateFromBacklog(*req.BookID, req.ParticipantID)
+				if err != nil {
+					writeError(w, http.StatusInternalServerError, "failed to nominate from backlog")
+					return
+				}
+				writeJSON(w, http.StatusOK, book)
+			} else {
+				// Create new nomination
+				req.Title = strings.TrimSpace(req.Title)
+				req.Authors = strings.TrimSpace(req.Authors)
+				if req.Title == "" || req.Authors == "" {
+					writeError(w, http.StatusBadRequest, "title and authors are required when book_id is not provided")
+					return
+				}
+				book, err := bs.Create(&model.Book{
+					Title:       req.Title,
+					Authors:     req.Authors,
+					NominatedBy: &req.ParticipantID,
+					Status:      "nominated",
+				})
+				if err != nil {
+					writeError(w, http.StatusInternalServerError, "failed to create nomination")
+					return
+				}
+				writeJSON(w, http.StatusCreated, book)
+			}
+			return
+		}
+
+		id, ok := parseIDFromPath(r.URL.Path, adminPrefix+"books/")
+		if !ok {
+			writeError(w, http.StatusBadRequest, "invalid book ID")
+			return
+		}
+
+		// Handle /books/{id}/move-to-backlog
+		if strings.HasSuffix(r.URL.Path, "/move-to-backlog") {
+			if r.Method != http.MethodPost {
+				writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+				return
+			}
+			if err := bs.MoveToBacklog(id); err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					writeError(w, http.StatusNotFound, "book not found")
+					return
+				}
+				writeError(w, http.StatusInternalServerError, "failed to move to backlog")
+				return
+			}
+			book, _ := bs.GetByID(id)
+			writeJSON(w, http.StatusOK, book)
+			return
+		}
+
+		// DELETE /books/{id}
+		if r.Method != http.MethodDelete {
+			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+			return
+		}
+		if err := bs.Delete(id); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				writeError(w, http.StatusNotFound, "book not found")
+				return
+			}
+			writeError(w, http.StatusInternalServerError, "failed to delete book")
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	})
 
 	// Serve embedded SPA for club paths.
