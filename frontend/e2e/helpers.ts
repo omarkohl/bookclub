@@ -1,4 +1,4 @@
-import { execSync, spawn, type ChildProcess } from "child_process";
+import { spawn, type ChildProcess } from "child_process";
 import { mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join, dirname } from "path";
@@ -27,9 +27,6 @@ export async function startServer(
   const clubSecret = opts.clubSecret ?? "testclub";
   const adminSecret = opts.adminSecret ?? "testadmin";
   const port = opts.port ?? 18081 + Math.floor(Math.random() * 1000);
-
-  // Build the binary
-  execSync("make build", { cwd: PROJECT_ROOT, stdio: "pipe" });
 
   const tmpDir = mkdtempSync(join(tmpdir(), "bookclub-e2e-"));
   const dbPath = join(tmpDir, "test.db");
