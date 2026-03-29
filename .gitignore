@@ -1,0 +1,20 @@
+# Go
+bin/
+*.db
+*.db-wal
+*.db-shm
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Embedded frontend (generated during build)
+internal/handler/frontend/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store

@@ -9,3 +9,7 @@ A self-hosted book club voting app. Members nominate books and vote using [quadr
 - Access controlled via secret URLs, with optional PINs
 
 See [docs/design.md](docs/design.md) for the full design document.
+
+## Development
+
+See [docs/dev.md](docs/dev.md).

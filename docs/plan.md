@@ -2,16 +2,16 @@
 
 Thin end-to-end slices — each phase results in something a tester can interact with.
 
-**Workflow per phase:** backend-first. Write Go integration tests → implement API → build UI → write Playwright e2e tests for the phase's user-facing behavior.
+**Workflow per phase:** backend-first. Write Go integration tests → implement API → build UI → write Playwright e2e tests for the phase's user-facing behavior. When a phase is complete, check off its items in this doc and commit the update together with that phase.
 
 ## Phase 0: Skeleton & Dev Loop
-- [ ] Go module + Vite React app scaffold
-- [ ] TanStack Query setup with `refetchOnWindowFocus`
-- [ ] Go serves embedded SPA with SPA fallback routing (all non-API/non-asset paths under `/{club_secret}/` return `index.html`; auth only at API layer, not SPA serving)
-- [ ] Frontend derives base path and secrets from URL at runtime (no server-side injection); Vite builds with `base: './'` for relative asset paths
-- [ ] SQLite connection with WAL mode + migration runner (empty schema)
-- [ ] `Makefile`: build, lint, fmt, test
-- [ ] Docker multi-stage build (serves hello world)
+- [x] Go module + Vite React app scaffold
+- [x] TanStack Query setup with `refetchOnWindowFocus`
+- [x] Go serves embedded SPA with SPA fallback routing (all non-API/non-asset paths under `/{club_secret}/` return `index.html`; auth only at API layer, not SPA serving)
+- [x] Frontend derives base path and secrets from URL at runtime (no server-side injection); Vite builds with `base: './'` for relative asset paths
+- [x] SQLite connection with WAL mode + migration runner (empty schema)
+- [x] `Makefile`: build, lint, fmt, test
+- [x] Docker multi-stage build (serves hello world)
 
 **Testable:** Visit the URL, see the React app. Docker works.
 
