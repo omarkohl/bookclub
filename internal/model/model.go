@@ -24,3 +24,15 @@ type Book struct {
 	Status      string    `json:"status"`
 	CreatedAt   time.Time `json:"created_at"`
 }
+
+type Vote struct {
+	ParticipantID int `json:"participant_id"`
+	BookID        int `json:"book_id"`
+	Credits       int `json:"credits"`
+}
+
+// BookScore holds a book's aggregated QV score.
+type BookScore struct {
+	BookID int     `json:"book_id"`
+	Score  float64 `json:"score"`
+}

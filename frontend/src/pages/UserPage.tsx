@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface Participant {
@@ -15,6 +15,23 @@ interface Book {
   nominated_by: number | null;
   status: string;
   created_at: string;
+}
+
+interface Settings {
+  credit_budget: number;
+  voting_state: string;
+  pins_enabled: boolean;
+}
+
+interface Vote {
+  participant_id: number;
+  book_id: number;
+  credits: number;
+}
+
+interface BookScore {
+  book_id: number;
+  score: number;
 }
 
 const STORAGE_KEY = "bookclub_participant_id";
@@ -44,14 +61,21 @@ export function UserPage({ apiBase }: { apiBase: string }) {
     },
   });
 
+  const { data: settings } = useQuery<Settings>({
+    queryKey: ["settings"],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}/settings`);
+      if (!res.ok) throw new Error("Failed to fetch settings");
+      return res.json();
+    },
+  });
+
   // Derive the selected participant. If the stored ID no longer exists
   // in the participant list, treat as unselected.
   const selectedParticipant = useMemo(() => {
     if (selectedId === null || participants.length === 0) return null;
     const found = participants.find((p) => p.id === selectedId);
     if (!found) {
-      // Clean up stale localStorage (side effect in memo is fine for
-      // localStorage — it's idempotent and not React state).
       localStorage.removeItem(STORAGE_KEY);
     }
     return found ?? null;
@@ -121,6 +145,8 @@ export function UserPage({ apiBase }: { apiBase: string }) {
     );
   }
 
+  const isRevealed = settings?.voting_state === "revealed";
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <div className="flex items-center justify-between">
@@ -138,18 +164,25 @@ export function UserPage({ apiBase }: { apiBase: string }) {
         </div>
       </div>
 
-      <NominationSection
-        apiBase={apiBase}
-        participantId={selectedParticipant.id}
-        myNomination={myNomination}
-        queryClient={queryClient}
-      />
+      {!isRevealed && (
+        <NominationSection
+          apiBase={apiBase}
+          participantId={selectedParticipant.id}
+          myNomination={myNomination}
+          queryClient={queryClient}
+        />
+      )}
 
-      <BookList
-        books={books}
-        participants={participants}
-        myParticipantId={selectedParticipant.id}
-      />
+      {books.length > 0 && settings && (
+        <VotingSection
+          apiBase={apiBase}
+          participantId={selectedParticipant.id}
+          books={books}
+          participants={participants}
+          settings={settings}
+          queryClient={queryClient}
+        />
+      )}
     </div>
   );
 }
@@ -315,50 +348,242 @@ function NominationSection({
   );
 }
 
-function BookList({
+function VotingSection({
+  apiBase,
+  participantId,
   books,
   participants,
-  myParticipantId,
+  settings,
+  queryClient,
 }: {
+  apiBase: string;
+  participantId: number;
   books: Book[];
   participants: Participant[];
-  myParticipantId: number;
+  settings: Settings;
+  queryClient: ReturnType<typeof useQueryClient>;
 }) {
+  const isRevealed = settings.voting_state === "revealed";
+
+  const { data: myVotes = [] } = useQuery<Vote[]>({
+    queryKey: ["votes", participantId],
+    queryFn: async () => {
+      const res = await fetch(
+        `${apiBase}/votes?participant_id=${participantId}`,
+      );
+      if (!res.ok) throw new Error("Failed to fetch votes");
+      return res.json();
+    },
+  });
+
+  const { data: scores = [] } = useQuery<BookScore[]>({
+    queryKey: ["scores"],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}/scores`);
+      if (!res.ok) throw new Error("Failed to fetch scores");
+      return res.json();
+    },
+    enabled: isRevealed,
+  });
+
+  // Build a map of book_id -> credits from saved votes
+  const savedVoteMap = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const v of myVotes) {
+      map.set(v.book_id, v.credits);
+    }
+    return map;
+  }, [myVotes]);
+
+  // Local allocation state, initialized from saved votes
+  const [allocations, setAllocations] = useState<Map<number, number>>(
+    new Map(),
+  );
+  const [initialized, setInitialized] = useState(false);
+
+  // Sync local state when saved votes load
+  if (!initialized && myVotes.length > 0) {
+    setAllocations(new Map(savedVoteMap));
+    setInitialized(true);
+  }
+
+  const totalAllocated = useMemo(() => {
+    let sum = 0;
+    for (const v of allocations.values()) sum += v;
+    return sum;
+  }, [allocations]);
+
+  const remaining = settings.credit_budget - totalAllocated;
+
+  const hasChanges = useMemo(() => {
+    if (allocations.size !== savedVoteMap.size) return true;
+    for (const [bookId, credits] of allocations) {
+      if (savedVoteMap.get(bookId) !== credits) return true;
+    }
+    return false;
+  }, [allocations, savedVoteMap]);
+
+  const setCredits = useCallback((bookId: number, credits: number) => {
+    setAllocations((prev) => {
+      const next = new Map(prev);
+      if (credits <= 0) {
+        next.delete(bookId);
+      } else {
+        next.set(bookId, credits);
+      }
+      return next;
+    });
+  }, []);
+
+  const voteMutation = useMutation({
+    mutationFn: async (votes: { book_id: number; credits: number }[]) => {
+      const res = await fetch(`${apiBase}/votes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          participant_id: participantId,
+          votes,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.error || "Failed to save votes");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["votes", participantId] });
+    },
+  });
+
+  const handleSave = () => {
+    const votes: { book_id: number; credits: number }[] = [];
+    for (const [bookId, credits] of allocations) {
+      if (credits > 0) votes.push({ book_id: bookId, credits });
+    }
+    voteMutation.mutate(votes);
+  };
+
   const participantMap = useMemo(() => {
     const map = new Map<number, string>();
-    for (const p of participants) {
-      map.set(p.id, p.name);
-    }
+    for (const p of participants) map.set(p.id, p.name);
     return map;
   }, [participants]);
 
-  if (books.length === 0) return null;
+  const scoreMap = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const s of scores) map.set(s.book_id, s.score);
+    return map;
+  }, [scores]);
+
+  // Sort books by score when revealed
+  const sortedBooks = useMemo(() => {
+    if (!isRevealed) return books;
+    return [...books].sort(
+      (a, b) => (scoreMap.get(b.id) ?? 0) - (scoreMap.get(a.id) ?? 0),
+    );
+  }, [books, isRevealed, scoreMap]);
 
   return (
     <section className="mt-8">
-      <h2 className="text-lg font-semibold">Nominated Books</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">
+          {isRevealed ? "Results" : "Vote"}
+        </h2>
+        {!isRevealed && (
+          <div className="text-sm">
+            <span className="text-stone-500">Remaining: </span>
+            <span
+              className={`font-semibold ${remaining < 0 ? "text-red-600" : "text-stone-900"}`}
+              data-testid="remaining-credits"
+            >
+              {remaining}
+            </span>
+            <span className="text-stone-400"> / {settings.credit_budget}</span>
+          </div>
+        )}
+      </div>
+
       <ul className="mt-3 divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
-        {books.map((book) => (
-          <li key={book.id} className="px-4 py-3">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-medium">
-                  {book.title}
-                  {book.nominated_by === myParticipantId && (
-                    <span className="ml-2 text-xs text-stone-400">(yours)</span>
+        {sortedBooks.map((book) => {
+          const currentCredits = allocations.get(book.id) ?? 0;
+          const score = scoreMap.get(book.id);
+
+          return (
+            <li key={book.id} className="px-4 py-3">
+              <div className="flex items-start justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">
+                    {book.title}
+                    {book.nominated_by === participantId && (
+                      <span className="ml-2 text-xs text-stone-400">
+                        (yours)
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-sm text-stone-500">{book.authors}</p>
+                  {book.nominated_by && (
+                    <p className="text-xs text-stone-400">
+                      Nominated by{" "}
+                      {participantMap.get(book.nominated_by) ?? "Unknown"}
+                    </p>
                   )}
-                </p>
-                <p className="text-sm text-stone-500">{book.authors}</p>
+                </div>
+                <div className="ml-4 flex items-center gap-3">
+                  {isRevealed ? (
+                    <div className="text-right">
+                      <p className="text-lg font-semibold">
+                        {score?.toFixed(2) ?? "0.00"}
+                      </p>
+                      <p className="text-xs text-stone-400">score</p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <label className="sr-only" htmlFor={`credits-${book.id}`}>
+                        Credits for {book.title}
+                      </label>
+                      <input
+                        id={`credits-${book.id}`}
+                        type="number"
+                        min={0}
+                        max={settings.credit_budget}
+                        value={currentCredits || ""}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          setCredits(book.id, Math.max(0, val));
+                        }}
+                        aria-label={`Credits for ${book.title}`}
+                        className="w-20 rounded-md border border-stone-300 px-2 py-1 text-right text-sm focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+                      />
+                      <span className="text-xs text-stone-400">credits</span>
+                    </div>
+                  )}
+                </div>
               </div>
-              {book.nominated_by && (
-                <span className="text-xs text-stone-400">
-                  {participantMap.get(book.nominated_by) ?? "Unknown"}
-                </span>
-              )}
-            </div>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
+
+      {!isRevealed && (
+        <div className="mt-4 flex items-center gap-3">
+          <button
+            onClick={handleSave}
+            disabled={remaining < 0 || voteMutation.isPending || !hasChanges}
+            className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
+          >
+            {voteMutation.isPending ? "Saving..." : "Save Votes"}
+          </button>
+          {voteMutation.isError && (
+            <p role="alert" className="text-sm text-red-600">
+              {voteMutation.error.message}
+            </p>
+          )}
+          {voteMutation.isSuccess && !hasChanges && (
+            <p className="text-sm text-green-600">Votes saved!</p>
+          )}
+        </div>
+      )}
     </section>
   );
 }

@@ -47,6 +47,7 @@ func New(db *sql.DB, clubSecret, adminSecret string) http.Handler {
 	ps := store.NewParticipantStore(db)
 	ss := store.NewSettingsStore(db)
 	bs := store.NewBookStore(db)
+	vs := store.NewVoteStore(db)
 
 	// API routes.
 	apiPrefix := "/api/" + clubSecret + "/"
@@ -391,6 +392,121 @@ func New(db *sql.DB, clubSecret, adminSecret string) http.Handler {
 		default:
 			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		}
+	})
+
+	// User API: settings (read-only).
+	mux.HandleFunc(apiPrefix+"settings", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+			return
+		}
+		s, err := ss.Get()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to get settings")
+			return
+		}
+		writeJSON(w, http.StatusOK, s)
+	})
+
+	// User API: votes.
+	mux.HandleFunc(apiPrefix+"votes", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			pidStr := r.URL.Query().Get("participant_id")
+			if pidStr == "" {
+				writeError(w, http.StatusBadRequest, "participant_id query param is required")
+				return
+			}
+			pid := 0
+			for _, c := range pidStr {
+				if c < '0' || c > '9' {
+					writeError(w, http.StatusBadRequest, "invalid participant_id")
+					return
+				}
+				pid = pid*10 + int(c-'0')
+			}
+			votes, err := vs.GetByParticipant(pid)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to get votes")
+				return
+			}
+			if votes == nil {
+				votes = []model.Vote{}
+			}
+			writeJSON(w, http.StatusOK, votes)
+		case http.MethodPost:
+			settings, err := ss.Get()
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to get settings")
+				return
+			}
+			if settings.VotingState != "open" {
+				writeError(w, http.StatusConflict, "voting is not open")
+				return
+			}
+			var req struct {
+				ParticipantID int          `json:"participant_id"`
+				Votes         []model.Vote `json:"votes"`
+			}
+			if err := decodeJSON(r, &req); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid JSON")
+				return
+			}
+			if req.ParticipantID == 0 {
+				writeError(w, http.StatusBadRequest, "participant_id is required")
+				return
+			}
+			// Validate credits are non-negative and total within budget
+			total := 0
+			for _, v := range req.Votes {
+				if v.Credits < 0 {
+					writeError(w, http.StatusBadRequest, "credits must be non-negative")
+					return
+				}
+				total += v.Credits
+			}
+			if total > settings.CreditBudget {
+				writeError(w, http.StatusBadRequest, "total credits exceed budget")
+				return
+			}
+			if err := vs.Set(req.ParticipantID, req.Votes); err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to save votes")
+				return
+			}
+			votes, _ := vs.GetByParticipant(req.ParticipantID)
+			if votes == nil {
+				votes = []model.Vote{}
+			}
+			writeJSON(w, http.StatusOK, votes)
+		default:
+			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		}
+	})
+
+	// User API: scores (only when revealed).
+	mux.HandleFunc(apiPrefix+"scores", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+			return
+		}
+		settings, err := ss.Get()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to get settings")
+			return
+		}
+		if settings.VotingState != "revealed" {
+			writeError(w, http.StatusConflict, "scores are only available when votes are revealed")
+			return
+		}
+		scores, err := vs.Scores()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to compute scores")
+			return
+		}
+		if scores == nil {
+			scores = []model.BookScore{}
+		}
+		writeJSON(w, http.StatusOK, scores)
 	})
 
 	// Admin API: books (all).

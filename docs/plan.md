@@ -40,12 +40,12 @@ Thin end-to-end slices — each phase results in something a tester can interact
 
 ## Phase 3: Voting (Quadratic)
 - [x] Migration: `votes` table (done in Phase 2)
-- [ ] API: submit votes (credit distribution), get own votes
-- [ ] API: compute QV scores (`SUM(sqrt(credits))`) — only returned when revealed
-- [ ] UI: credit distribution interface with prominent remaining-credits display (budget − sum of allocated, always visible)
-- [ ] Users can vote on their own nominations
-- [ ] Client-side validation (budget, non-negative) + server-side enforcement
-- [ ] Playwright: user distributes credits, sees own allocation, remaining credits update live
+- [x] API: submit votes (credit distribution), get own votes
+- [x] API: compute QV scores (`SUM(sqrt(credits))`) — only returned when revealed
+- [x] UI: credit distribution interface with prominent remaining-credits display (budget − sum of allocated, always visible)
+- [x] Users can vote on their own nominations
+- [x] Client-side validation (budget, non-negative) + server-side enforcement
+- [x] Playwright: user distributes credits, sees own allocation, remaining credits update live
 
 **Testable:** Users distribute credits across books, see their own allocation. Remaining credits always clearly visible.
 

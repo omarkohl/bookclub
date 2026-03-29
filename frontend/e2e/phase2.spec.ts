@@ -51,9 +51,9 @@ test.describe("Phase 2: Books & Nominations", () => {
     await expect(nominationSection.getByText("Dune")).toBeVisible();
     await expect(nominationSection.getByText("Frank Herbert")).toBeVisible();
 
-    // Should see the book in the "Nominated Books" list
+    // Should see the book in the voting section
     await expect(
-      page.getByRole("heading", { name: "Nominated Books" }),
+      page.getByRole("heading", { name: "Vote" }),
     ).toBeVisible();
 
     // Admin sees the nomination and deletes it
