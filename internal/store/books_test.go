@@ -243,6 +243,55 @@ func TestBookStore_Update(t *testing.T) {
 	}
 }
 
+func TestBookStore_MoveToBacklog_DeletesVotes(t *testing.T) {
+	db := newTestDB(t)
+	bs := store.NewBookStore(db)
+	vs := store.NewVoteStore(db)
+	alice := createTestParticipant(t, db, "Alice")
+	bob := createTestParticipant(t, db, "Bob")
+	book := createTestBook(t, db, "Dune", &alice.ID)
+
+	vs.Set(alice.ID, []model.Vote{{BookID: book.ID, Credits: 30}})
+	vs.Set(bob.ID, []model.Vote{{BookID: book.ID, Credits: 20}})
+
+	if err := bs.MoveToBacklog(book.ID); err != nil {
+		t.Fatalf("MoveToBacklog: %v", err)
+	}
+
+	aliceVotes, _ := vs.GetByParticipant(alice.ID)
+	bobVotes, _ := vs.GetByParticipant(bob.ID)
+	if len(aliceVotes) != 0 {
+		t.Errorf("expected 0 alice votes after move to backlog, got %d", len(aliceVotes))
+	}
+	if len(bobVotes) != 0 {
+		t.Errorf("expected 0 bob votes after move to backlog, got %d", len(bobVotes))
+	}
+}
+
+func TestBookStore_NominateFromBacklog_DeletesVotesOnOldNomination(t *testing.T) {
+	db := newTestDB(t)
+	bs := store.NewBookStore(db)
+	vs := store.NewVoteStore(db)
+	alice := createTestParticipant(t, db, "Alice")
+	bob := createTestParticipant(t, db, "Bob")
+	oldBook := createTestBook(t, db, "Dune", &alice.ID)
+	backlogBook, _ := bs.Create(&model.Book{
+		Title: "Neuromancer", Authors: "William Gibson", Status: "backlog",
+	})
+
+	// Bob votes on Alice's current nomination
+	vs.Set(bob.ID, []model.Vote{{BookID: oldBook.ID, Credits: 40}})
+
+	if _, err := bs.NominateFromBacklog(backlogBook.ID, alice.ID); err != nil {
+		t.Fatalf("NominateFromBacklog: %v", err)
+	}
+
+	bobVotes, _ := vs.GetByParticipant(bob.ID)
+	if len(bobVotes) != 0 {
+		t.Errorf("expected 0 bob votes after old nomination moved to backlog, got %d", len(bobVotes))
+	}
+}
+
 func TestBookStore_UpdateNonexistent(t *testing.T) {
 	db := newTestDB(t)
 	bs := store.NewBookStore(db)
