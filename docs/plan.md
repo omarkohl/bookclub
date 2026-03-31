@@ -80,8 +80,8 @@ Thin end-to-end slices — each phase results in something a tester can interact
 - [x] API: add to backlog, list backlog, delete from backlog (done in Phase 2)
 - [x] API: nominate from backlog (user for self, admin for anyone) (done in Phase 2)
 - [x] Retrofit nomination deletion/replacement: move to backlog is now also an option (done in Phase 2)
-- [ ] UI: backlog search
-- [ ] Playwright: add to backlog, nominate from backlog, search, replaced nomination appears in backlog
+- [x] UI: backlog search
+- [x] Playwright: add to backlog, nominate from backlog, search, replaced nomination appears in backlog
 
 **Testable:** Users manage a shared reading list and nominate from it. Replaced nominations move to backlog.
 

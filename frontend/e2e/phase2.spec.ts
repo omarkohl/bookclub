@@ -38,7 +38,7 @@ test.describe("Phase 2: Books & Nominations", () => {
     await page.getByLabel("Book title").fill("Dune");
     await page.getByLabel("Author(s)").fill("Frank Herbert");
     await page.getByLabel("Description").fill("A sci-fi epic about spice");
-    await page.getByRole("button", { name: "Nominate" }).click();
+    await page.getByRole("button", { name: "Nominate", exact: true }).click();
 
     // Should see the nomination in "Your Nomination" section
     await expect(
@@ -70,7 +70,7 @@ test.describe("Phase 2: Books & Nominations", () => {
     ).toBeVisible();
     await page.getByLabel("Book title").fill("Neuromancer");
     await page.getByLabel("Author(s)").fill("William Gibson");
-    await page.getByRole("button", { name: "Nominate" }).click();
+    await page.getByRole("button", { name: "Nominate", exact: true }).click();
 
     // Admin moves it to backlog
     await page.goto(server.adminUrl);
@@ -98,7 +98,9 @@ test.describe("Phase 2: Books & Nominations", () => {
       .getByLabel("Description")
       .fill("A far-future pilgrimage tale");
     await page.getByLabel("Link").fill("https://example.com/hyperion");
-    await page.getByRole("button", { name: "Nominate" }).click();
+    await page
+      .getByRole("button", { name: "Nominate", exact: true })
+      .click();
 
     // Book should appear in the voting section
     const voteSection = page.locator("section").filter({

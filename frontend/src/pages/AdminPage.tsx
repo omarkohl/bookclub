@@ -28,6 +28,7 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
   const [newName, setNewName] = useState("");
   const [error, setError] = useState("");
   const [budgetInput, setBudgetInput] = useState("");
+  const [backlogSearch, setBacklogSearch] = useState("");
   const [budgetConfirm, setBudgetConfirm] = useState<{
     budget: number;
     affectedUsers: number;
@@ -187,6 +188,16 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
 
   const nominatedBooks = books.filter((b) => b.status === "nominated");
   const backlogBooks = books.filter((b) => b.status === "backlog");
+  const filteredBacklog = (() => {
+    if (!backlogSearch.trim()) return backlogBooks;
+    const q = backlogSearch.toLowerCase();
+    return backlogBooks.filter(
+      (b) =>
+        b.title.toLowerCase().includes(q) ||
+        b.authors.toLowerCase().includes(q) ||
+        (b.description?.toLowerCase().includes(q) ?? false),
+    );
+  })();
   const participantMap = new Map(participants.map((p) => [p.id, p.name]));
 
   return (
@@ -389,11 +400,25 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
 
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Backlog</h2>
-        {backlogBooks.length === 0 ? (
-          <p className="mt-4 text-sm text-stone-500">No books in backlog.</p>
+        {backlogBooks.length > 0 && (
+          <input
+            type="text"
+            value={backlogSearch}
+            onChange={(e) => setBacklogSearch(e.target.value)}
+            placeholder="Search backlog..."
+            aria-label="Search backlog"
+            className="mt-3 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+          />
+        )}
+        {filteredBacklog.length === 0 ? (
+          <p className="mt-4 text-sm text-stone-500">
+            {backlogBooks.length === 0
+              ? "No books in backlog."
+              : "No matching books."}
+          </p>
         ) : (
           <ul className="mt-3 divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
-            {backlogBooks.map((book) => (
+            {filteredBacklog.map((book) => (
               <li
                 key={book.id}
                 className="flex items-center justify-between px-4 py-3"

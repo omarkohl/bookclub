@@ -624,6 +624,23 @@ func TestUserBooks_BacklogCRUD(t *testing.T) {
 	if len(list) != 1 {
 		t.Fatalf("expected 1, got %d", len(list))
 	}
+
+	// Delete backlog book (should work even when voting is revealed)
+	bookID := list[0].ID
+	req, _ := http.NewRequest(http.MethodDelete, fmt.Sprintf("%sbooks/%d", user, bookID), nil)
+	resp, _ = http.DefaultClient.Do(req)
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("expected 204 for backlog delete, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	// Verify backlog is empty
+	resp, _ = http.Get(user + "backlog")
+	json.NewDecoder(resp.Body).Decode(&list)
+	resp.Body.Close()
+	if len(list) != 0 {
+		t.Fatalf("expected empty backlog after delete, got %d", len(list))
+	}
 }
 
 func TestUserBooks_ValidationErrors(t *testing.T) {

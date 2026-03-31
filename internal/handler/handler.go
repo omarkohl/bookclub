@@ -361,15 +361,6 @@ func New(db *sql.DB, clubSecret, adminSecret string) http.Handler {
 			}
 			writeJSON(w, http.StatusOK, book)
 		case http.MethodDelete:
-			settings, err := ss.Get()
-			if err != nil {
-				writeError(w, http.StatusInternalServerError, "failed to get settings")
-				return
-			}
-			if settings.VotingState == "revealed" {
-				writeError(w, http.StatusConflict, "cannot delete nominations while votes are revealed")
-				return
-			}
 			book, err := bs.GetByID(id)
 			if err != nil {
 				if errors.Is(err, sql.ErrNoRows) {
@@ -379,9 +370,16 @@ func New(db *sql.DB, clubSecret, adminSecret string) http.Handler {
 				writeError(w, http.StatusInternalServerError, "failed to get book")
 				return
 			}
-			if book.Status != "nominated" {
-				writeError(w, http.StatusBadRequest, "can only delete nominations via this endpoint")
-				return
+			if book.Status == "nominated" {
+				settings, err := ss.Get()
+				if err != nil {
+					writeError(w, http.StatusInternalServerError, "failed to get settings")
+					return
+				}
+				if settings.VotingState == "revealed" {
+					writeError(w, http.StatusConflict, "cannot delete nominations while votes are revealed")
+					return
+				}
 			}
 			if err := bs.Delete(id); err != nil {
 				writeError(w, http.StatusInternalServerError, "failed to delete book")
