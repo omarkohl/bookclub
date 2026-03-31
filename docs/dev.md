@@ -78,6 +78,20 @@ docker run -p 8080:8080 \
 | `BOOKCLUB_ADMIN_SECRET` | `admin` | URL secret for admin access |
 | `BOOKCLUB_DB_PATH` | `bookclub.db` | SQLite database path |
 
+## Seeding Test Data
+
+With the server running, generate a realistic dataset (5 participants, 5 nominated books, 3 backlog books, votes):
+
+```sh
+go run ./cmd/seed
+```
+
+Custom server or secrets:
+
+```sh
+go run ./cmd/seed -base-url http://localhost:9090 -club myclub -admin myadmin
+```
+
 ## Project Structure
 
 ```
