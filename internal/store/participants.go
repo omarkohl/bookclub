@@ -42,7 +42,7 @@ func (s *ParticipantStore) List() ([]model.Participant, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list participants: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var participants []model.Participant
 	for rows.Next() {

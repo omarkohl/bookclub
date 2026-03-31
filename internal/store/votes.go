@@ -52,7 +52,7 @@ func (s *VoteStore) GetByParticipant(participantID int) ([]model.Vote, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get votes for participant %d: %w", participantID, err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var votes []model.Vote
 	for rows.Next() {
@@ -86,7 +86,7 @@ func (s *VoteStore) Scores() ([]model.BookScore, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get all votes: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	// Aggregate in Go since SQLite doesn't have sqrt()
 	scoreMap := make(map[int]float64)

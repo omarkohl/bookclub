@@ -59,7 +59,7 @@ func (s *BookStore) listByStatus(status string) ([]model.Book, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list books (status=%s): %w", status, err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var books []model.Book
 	for rows.Next() {
@@ -82,7 +82,7 @@ func (s *BookStore) ListAll() ([]model.Book, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list all books: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var books []model.Book
 	for rows.Next() {
