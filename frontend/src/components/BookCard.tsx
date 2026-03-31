@@ -1,7 +1,7 @@
 import { type ReactNode } from "react";
 import type { Book } from "../types";
 
-const PREVIEW_LENGTH = 100;
+const PREVIEW_LENGTH = 200;
 
 export function BookCard({
   book,
@@ -24,11 +24,11 @@ export function BookCard({
   return (
     <div>
       <div className="min-w-0">
-        <p className="text-sm font-medium">{book.title}</p>
-        <p className="text-xs text-stone-500">{book.authors}</p>
-        {meta}
+        <p className="text-base font-semibold">{book.title}</p>
+        <p className="mt-0.5 text-sm text-stone-500">{book.authors}</p>
+        {meta && <div className="mt-1">{meta}</div>}
         {linkOnly ? (
-          <p className="mt-1 text-xs">
+          <p className="mt-2 text-xs">
             <a
               href={book.link}
               target="_blank"
@@ -40,7 +40,7 @@ export function BookCard({
           </p>
         ) : (
           previewText && (
-            <p className="mt-1 text-xs text-stone-400">
+            <p className="mt-2 text-sm text-stone-600">
               {expanded ? (
                 <>
                   {book.description && (
@@ -65,7 +65,7 @@ export function BookCard({
                       {" "}
                       <button
                         onClick={onToggle}
-                        className="text-stone-400 underline hover:text-stone-600"
+                        className="text-stone-500 underline hover:text-stone-700"
                       >
                         less
                       </button>
@@ -82,7 +82,7 @@ export function BookCard({
                       {" "}
                       <button
                         onClick={onToggle}
-                        className="text-stone-400 underline hover:text-stone-600"
+                        className="text-stone-500 underline hover:text-stone-700"
                       >
                         more
                       </button>
@@ -94,7 +94,7 @@ export function BookCard({
           )
         )}
       </div>
-      {actions && <div className="mt-2 flex flex-wrap gap-1">{actions}</div>}
+      {actions && <div className="mt-3 flex flex-wrap gap-1">{actions}</div>}
     </div>
   );
 }

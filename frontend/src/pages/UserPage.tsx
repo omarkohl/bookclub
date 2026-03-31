@@ -920,7 +920,7 @@ function VotingSection({
                 meta={
                   <>
                     {book.nominated_by && (
-                      <p className="text-xs text-stone-400">
+                      <p className="text-xs text-stone-500">
                         Nominated by{" "}
                         {participantMap.get(book.nominated_by) ?? "Unknown"}
                         {book.nominated_by === participantId && (
