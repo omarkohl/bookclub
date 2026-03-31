@@ -166,15 +166,65 @@ func New(db *sql.DB, clubSecret, adminSecret string) http.Handler {
 				writeError(w, http.StatusBadRequest, "credit_budget must be positive")
 				return
 			}
+			// Check current budget to detect decrease
+			current, err := ss.Get()
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to get settings")
+				return
+			}
 			if err := ss.Update(&req); err != nil {
 				writeError(w, http.StatusInternalServerError, "failed to update settings")
 				return
 			}
+			affected := 0
+			if req.CreditBudget < current.CreditBudget {
+				affected, err = vs.ClearOverBudget(req.CreditBudget)
+				if err != nil {
+					writeError(w, http.StatusInternalServerError, "failed to clear over-budget votes")
+					return
+				}
+			}
 			s, _ := ss.Get()
-			writeJSON(w, http.StatusOK, s)
+			writeJSON(w, http.StatusOK, struct {
+				model.Settings
+				AffectedUsers int `json:"affected_users"`
+			}{*s, affected})
 		default:
 			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		}
+	})
+
+	// Admin API: preview credit budget change.
+	mux.HandleFunc(adminPrefix+"settings/budget-preview", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+			return
+		}
+		budgetStr := r.URL.Query().Get("budget")
+		if budgetStr == "" {
+			writeError(w, http.StatusBadRequest, "budget query param is required")
+			return
+		}
+		budget := 0
+		for _, c := range budgetStr {
+			if c < '0' || c > '9' {
+				writeError(w, http.StatusBadRequest, "invalid budget")
+				return
+			}
+			budget = budget*10 + int(c-'0')
+		}
+		if budget < 1 {
+			writeError(w, http.StatusBadRequest, "budget must be positive")
+			return
+		}
+		count, err := vs.CountOverBudget(budget)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to count affected users")
+			return
+		}
+		writeJSON(w, http.StatusOK, struct {
+			AffectedUsers int `json:"affected_users"`
+		}{count})
 	})
 
 	// User API: books (nominated).

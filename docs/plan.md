@@ -59,10 +59,10 @@ Thin end-to-end slices — each phase results in something a tester can interact
 **Testable:** Full cycle: nominate → vote → admin reveals → see winner → admin re-opens.
 
 ## Phase 5: Credit Budget Management
-- [ ] API: set credit budget; return affected-user count (users whose spent credits exceed new budget)
-- [ ] Decreasing budget clears all votes for over-budget users — they re-vote on next visit
-- [ ] Admin UI: credit budget config with confirmation warning showing affected-user count
-- [ ] Playwright: admin changes budget, over-budget user's votes are cleared
+- [x] API: set credit budget; return affected-user count (users whose spent credits exceed new budget)
+- [x] Decreasing budget clears all votes for over-budget users — they re-vote on next visit
+- [x] Admin UI: credit budget config with confirmation warning showing affected-user count
+- [x] Playwright: admin changes budget, over-budget user's votes are cleared
 
 **Testable:** Admin adjusts credit budget, affected users' votes are reset.
 

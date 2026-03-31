@@ -263,6 +263,131 @@ func TestAdminSettings_GetAndUpdate(t *testing.T) {
 	}
 }
 
+func TestAdminSettings_CreditBudgetClearsOverBudgetVotes(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+	admin := srv.URL + "/api/testclub/admin/testadmin/"
+	user := srv.URL + "/api/testclub/"
+
+	alice := createParticipant(t, admin, "Alice")
+	bob := createParticipant(t, admin, "Bob")
+
+	// Alice and Bob nominate books
+	body := bytes.NewBufferString(fmt.Sprintf(
+		`{"title":"Dune","authors":"Frank Herbert","participant_id":%d}`, alice.ID))
+	resp, _ := http.Post(user+"books", "application/json", body)
+	var aliceBook model.Book
+	json.NewDecoder(resp.Body).Decode(&aliceBook)
+	resp.Body.Close()
+
+	body = bytes.NewBufferString(fmt.Sprintf(
+		`{"title":"Neuromancer","authors":"William Gibson","participant_id":%d}`, bob.ID))
+	resp, _ = http.Post(user+"books", "application/json", body)
+	var bobBook model.Book
+	json.NewDecoder(resp.Body).Decode(&bobBook)
+	resp.Body.Close()
+
+	// Alice votes 80 credits (within default 100 budget)
+	body = bytes.NewBufferString(fmt.Sprintf(
+		`{"participant_id":%d,"votes":[{"book_id":%d,"credits":50},{"book_id":%d,"credits":30}]}`,
+		alice.ID, aliceBook.ID, bobBook.ID))
+	resp, _ = http.Post(user+"votes", "application/json", body)
+	resp.Body.Close()
+
+	// Bob votes 40 credits
+	body = bytes.NewBufferString(fmt.Sprintf(
+		`{"participant_id":%d,"votes":[{"book_id":%d,"credits":40}]}`,
+		bob.ID, aliceBook.ID))
+	resp, _ = http.Post(user+"votes", "application/json", body)
+	resp.Body.Close()
+
+	// Admin lowers budget to 50 — Alice (80) is over, Bob (40) is fine
+	body = bytes.NewBufferString(`{"credit_budget":50,"voting_state":"open","pins_enabled":false}`)
+	req, _ := http.NewRequest(http.MethodPut, admin+"settings", body)
+	req.Header.Set("Content-Type", "application/json")
+	resp, _ = http.DefaultClient.Do(req)
+	var settingsResp struct {
+		CreditBudget  int `json:"credit_budget"`
+		AffectedUsers int `json:"affected_users"`
+	}
+	json.NewDecoder(resp.Body).Decode(&settingsResp)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	if settingsResp.CreditBudget != 50 {
+		t.Errorf("expected budget 50, got %d", settingsResp.CreditBudget)
+	}
+	if settingsResp.AffectedUsers != 1 {
+		t.Errorf("expected 1 affected user, got %d", settingsResp.AffectedUsers)
+	}
+
+	// Alice's votes should be cleared
+	resp, _ = http.Get(fmt.Sprintf("%svotes?participant_id=%d", user, alice.ID))
+	var aliceVotes []model.Vote
+	json.NewDecoder(resp.Body).Decode(&aliceVotes)
+	resp.Body.Close()
+	if len(aliceVotes) != 0 {
+		t.Errorf("expected 0 alice votes, got %d", len(aliceVotes))
+	}
+
+	// Bob's votes should remain
+	resp, _ = http.Get(fmt.Sprintf("%svotes?participant_id=%d", user, bob.ID))
+	var bobVotes []model.Vote
+	json.NewDecoder(resp.Body).Decode(&bobVotes)
+	resp.Body.Close()
+	if len(bobVotes) != 1 {
+		t.Errorf("expected 1 bob vote, got %d", len(bobVotes))
+	}
+}
+
+func TestAdminSettings_BudgetPreview(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+	admin := srv.URL + "/api/testclub/admin/testadmin/"
+	user := srv.URL + "/api/testclub/"
+
+	alice := createParticipant(t, admin, "Alice")
+	bob := createParticipant(t, admin, "Bob")
+
+	// Nominate books and vote
+	body := bytes.NewBufferString(fmt.Sprintf(
+		`{"title":"Dune","authors":"Frank Herbert","participant_id":%d}`, alice.ID))
+	resp, _ := http.Post(user+"books", "application/json", body)
+	var book model.Book
+	json.NewDecoder(resp.Body).Decode(&book)
+	resp.Body.Close()
+
+	body = bytes.NewBufferString(fmt.Sprintf(
+		`{"participant_id":%d,"votes":[{"book_id":%d,"credits":80}]}`, alice.ID, book.ID))
+	resp, _ = http.Post(user+"votes", "application/json", body)
+	resp.Body.Close()
+
+	body = bytes.NewBufferString(fmt.Sprintf(
+		`{"participant_id":%d,"votes":[{"book_id":%d,"credits":40}]}`, bob.ID, book.ID))
+	resp, _ = http.Post(user+"votes", "application/json", body)
+	resp.Body.Close()
+
+	// Preview: budget=50 should affect Alice (80) but not Bob (40)
+	resp, _ = http.Get(admin + "settings/budget-preview?budget=50")
+	var preview struct {
+		AffectedUsers int `json:"affected_users"`
+	}
+	json.NewDecoder(resp.Body).Decode(&preview)
+	resp.Body.Close()
+	if preview.AffectedUsers != 1 {
+		t.Errorf("expected 1 affected, got %d", preview.AffectedUsers)
+	}
+
+	// Preview: budget=100 should affect nobody
+	resp, _ = http.Get(admin + "settings/budget-preview?budget=100")
+	json.NewDecoder(resp.Body).Decode(&preview)
+	resp.Body.Close()
+	if preview.AffectedUsers != 0 {
+		t.Errorf("expected 0 affected, got %d", preview.AffectedUsers)
+	}
+}
+
 func TestAdminSettings_InvalidVotingState(t *testing.T) {
 	srv := setupTestServer(t)
 	defer srv.Close()

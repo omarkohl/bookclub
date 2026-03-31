@@ -27,6 +27,11 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState("");
   const [error, setError] = useState("");
+  const [budgetInput, setBudgetInput] = useState("");
+  const [budgetConfirm, setBudgetConfirm] = useState<{
+    budget: number;
+    affectedUsers: number;
+  } | null>(null);
 
   const { data: settings } = useQuery<Settings>({
     queryKey: ["admin", "settings"],
@@ -51,6 +56,46 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
       return res.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "settings"] });
+    },
+  });
+
+  const previewBudgetMutation = useMutation({
+    mutationFn: async (newBudget: number) => {
+      const res = await fetch(
+        `${apiBase}/settings/budget-preview?budget=${newBudget}`,
+      );
+      if (!res.ok) throw new Error("Failed to preview budget change");
+      return res.json() as Promise<{ affected_users: number }>;
+    },
+    onSuccess: (data, newBudget) => {
+      if (data.affected_users > 0) {
+        setBudgetConfirm({
+          budget: newBudget,
+          affectedUsers: data.affected_users,
+        });
+      } else {
+        applyBudgetMutation.mutate(newBudget);
+      }
+    },
+  });
+
+  const applyBudgetMutation = useMutation({
+    mutationFn: async (newBudget: number) => {
+      const res = await fetch(`${apiBase}/settings`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...settings,
+          credit_budget: newBudget,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to update budget");
+      return res.json();
+    },
+    onSuccess: () => {
+      setBudgetInput("");
+      setBudgetConfirm(null);
       queryClient.invalidateQueries({ queryKey: ["admin", "settings"] });
     },
   });
@@ -172,6 +217,70 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
                 ? "Reveal Results"
                 : "Reopen Voting"}
             </button>
+          </div>
+
+          <div className="mt-4">
+            <label className="text-sm text-stone-500">
+              Credit Budget:{" "}
+              <span className="font-medium text-stone-900">
+                {settings.credit_budget}
+              </span>
+            </label>
+            <div className="mt-2 flex gap-2">
+              <input
+                type="number"
+                min={1}
+                value={budgetInput}
+                onChange={(e) => setBudgetInput(e.target.value)}
+                placeholder="New budget"
+                aria-label="New credit budget"
+                className="w-32 rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+              />
+              <button
+                onClick={() => {
+                  const val = parseInt(budgetInput, 10);
+                  if (val > 0) previewBudgetMutation.mutate(val);
+                }}
+                disabled={
+                  !budgetInput ||
+                  parseInt(budgetInput, 10) <= 0 ||
+                  previewBudgetMutation.isPending ||
+                  applyBudgetMutation.isPending
+                }
+                className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
+              >
+                Update
+              </button>
+            </div>
+            {budgetConfirm && (
+              <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3">
+                <p className="text-sm text-amber-800">
+                  Changing budget to {budgetConfirm.budget} will clear votes for{" "}
+                  <strong>
+                    {budgetConfirm.affectedUsers}{" "}
+                    {budgetConfirm.affectedUsers === 1 ? "user" : "users"}
+                  </strong>{" "}
+                  who exceed the new limit.
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    onClick={() =>
+                      applyBudgetMutation.mutate(budgetConfirm.budget)
+                    }
+                    disabled={applyBudgetMutation.isPending}
+                    className="rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-amber-700 disabled:opacity-50"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    onClick={() => setBudgetConfirm(null)}
+                    className="rounded-md px-3 py-1.5 text-sm text-stone-600 transition-colors hover:bg-stone-100"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </section>
       )}

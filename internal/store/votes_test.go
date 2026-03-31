@@ -192,6 +192,80 @@ func TestVoteStore_CascadeOnBookDelete(t *testing.T) {
 	}
 }
 
+func TestVoteStore_ClearOverBudget(t *testing.T) {
+	db := newTestDB(t)
+	vs := store.NewVoteStore(db)
+	alice := createTestParticipant(t, db, "Alice")
+	bob := createTestParticipant(t, db, "Bob")
+	carol := createTestParticipant(t, db, "Carol")
+	book1 := createTestBook(t, db, "Dune", &alice.ID)
+	book2 := createTestBook(t, db, "Neuromancer", &bob.ID)
+
+	// Alice spends 80 credits
+	vs.Set(alice.ID, []model.Vote{
+		{BookID: book1.ID, Credits: 50},
+		{BookID: book2.ID, Credits: 30},
+	})
+	// Bob spends 40 credits
+	vs.Set(bob.ID, []model.Vote{
+		{BookID: book1.ID, Credits: 40},
+	})
+	// Carol spends 60 credits
+	vs.Set(carol.ID, []model.Vote{
+		{BookID: book2.ID, Credits: 60},
+	})
+
+	// Lower budget to 50: Alice (80) and Carol (60) are over, Bob (40) is fine
+	affected, err := vs.ClearOverBudget(50)
+	if err != nil {
+		t.Fatalf("ClearOverBudget: %v", err)
+	}
+	if affected != 2 {
+		t.Errorf("expected 2 affected users, got %d", affected)
+	}
+
+	// Alice's votes should be cleared
+	aliceVotes, _ := vs.GetByParticipant(alice.ID)
+	if len(aliceVotes) != 0 {
+		t.Errorf("expected 0 alice votes, got %d", len(aliceVotes))
+	}
+
+	// Bob's votes should remain
+	bobVotes, _ := vs.GetByParticipant(bob.ID)
+	if len(bobVotes) != 1 {
+		t.Errorf("expected 1 bob vote, got %d", len(bobVotes))
+	}
+
+	// Carol's votes should be cleared
+	carolVotes, _ := vs.GetByParticipant(carol.ID)
+	if len(carolVotes) != 0 {
+		t.Errorf("expected 0 carol votes, got %d", len(carolVotes))
+	}
+}
+
+func TestVoteStore_ClearOverBudget_NoneAffected(t *testing.T) {
+	db := newTestDB(t)
+	vs := store.NewVoteStore(db)
+	alice := createTestParticipant(t, db, "Alice")
+	book := createTestBook(t, db, "Dune", &alice.ID)
+
+	vs.Set(alice.ID, []model.Vote{{BookID: book.ID, Credits: 25}})
+
+	// Budget higher than anyone's spending
+	affected, err := vs.ClearOverBudget(100)
+	if err != nil {
+		t.Fatalf("ClearOverBudget: %v", err)
+	}
+	if affected != 0 {
+		t.Errorf("expected 0 affected, got %d", affected)
+	}
+
+	votes, _ := vs.GetByParticipant(alice.ID)
+	if len(votes) != 1 {
+		t.Errorf("expected 1 vote preserved, got %d", len(votes))
+	}
+}
+
 func TestVoteStore_ClearByParticipant(t *testing.T) {
 	db := newTestDB(t)
 	vs := store.NewVoteStore(db)

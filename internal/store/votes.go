@@ -108,6 +108,52 @@ func (s *VoteStore) Scores() ([]model.BookScore, error) {
 	return scores, nil
 }
 
+// CountOverBudget returns the number of participants whose total credits exceed the given budget.
+func (s *VoteStore) CountOverBudget(budget int) (int, error) {
+	var count int
+	err := s.db.QueryRow(
+		"SELECT COUNT(*) FROM (SELECT participant_id FROM votes GROUP BY participant_id HAVING SUM(credits) > ?)",
+		budget,
+	).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count over-budget participants: %w", err)
+	}
+	return count, nil
+}
+
+// ClearOverBudget deletes all votes for participants whose total credits exceed the given budget.
+// Returns the number of affected participants.
+func (s *VoteStore) ClearOverBudget(budget int) (int, error) {
+	rows, err := s.db.Query(
+		"SELECT participant_id FROM votes GROUP BY participant_id HAVING SUM(credits) > ?",
+		budget,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("find over-budget participants: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var pids []int
+	for rows.Next() {
+		var pid int
+		if err := rows.Scan(&pid); err != nil {
+			return 0, fmt.Errorf("scan participant_id: %w", err)
+		}
+		pids = append(pids, pid)
+	}
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+
+	for _, pid := range pids {
+		if _, err := s.db.Exec("DELETE FROM votes WHERE participant_id = ?", pid); err != nil {
+			return 0, fmt.Errorf("clear votes for participant %d: %w", pid, err)
+		}
+	}
+
+	return len(pids), nil
+}
+
 // ClearByParticipant deletes all votes for a participant.
 func (s *VoteStore) ClearByParticipant(participantID int) error {
 	_, err := s.db.Exec("DELETE FROM votes WHERE participant_id = ?", participantID)
