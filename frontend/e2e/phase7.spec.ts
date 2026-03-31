@@ -118,7 +118,8 @@ test.describe("Phase 7: Backlog", () => {
       timeout: 2000,
     });
 
-    // Delete a book from backlog
+    // Delete a book from backlog (accept confirmation dialog)
+    page.on("dialog", (dialog) => dialog.accept());
     await backlogSection
       .getByRole("button", { name: "Delete Snow Crash" })
       .click();

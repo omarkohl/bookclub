@@ -56,9 +56,10 @@ test.describe("Phase 2: Books & Nominations", () => {
       page.getByRole("heading", { name: "Vote" }),
     ).toBeVisible();
 
-    // Admin sees the nomination and deletes it
+    // Admin sees the nomination and deletes it (with confirmation)
     await page.goto(server.adminUrl);
     await expect(page.getByText("Dune")).toBeVisible();
+    page.on("dialog", (dialog) => dialog.accept());
     await page.getByRole("button", { name: "Delete Dune" }).click();
     await expect(page.getByText("No nominations yet")).toBeVisible();
 

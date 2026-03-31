@@ -205,6 +205,56 @@ func TestBookStore_GetNominationByParticipant(t *testing.T) {
 	}
 }
 
+func TestBookStore_Update(t *testing.T) {
+	db := newTestDB(t)
+	bs := store.NewBookStore(db)
+	alice := createTestParticipant(t, db, "Alice")
+
+	book, _ := bs.Create(&model.Book{
+		Title: "Dune", Authors: "Frank Herbert",
+		Description: "Old description", Link: "https://old.com",
+		NominatedBy: &alice.ID, Status: "nominated",
+	})
+
+	updated, err := bs.Update(book.ID, &model.Book{
+		Title:       "Dune Messiah",
+		Authors:     "Frank Herbert",
+		Description: "New description",
+		Link:        "https://new.com",
+	})
+	if err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	if updated.Title != "Dune Messiah" {
+		t.Errorf("expected Dune Messiah, got %q", updated.Title)
+	}
+	if updated.Description != "New description" {
+		t.Errorf("expected New description, got %q", updated.Description)
+	}
+	if updated.Link != "https://new.com" {
+		t.Errorf("expected https://new.com, got %q", updated.Link)
+	}
+	// Status and nominated_by should be unchanged
+	if updated.Status != "nominated" {
+		t.Errorf("expected nominated, got %q", updated.Status)
+	}
+	if updated.NominatedBy == nil || *updated.NominatedBy != alice.ID {
+		t.Errorf("expected nominated_by=%d, got %v", alice.ID, updated.NominatedBy)
+	}
+}
+
+func TestBookStore_UpdateNonexistent(t *testing.T) {
+	db := newTestDB(t)
+	bs := store.NewBookStore(db)
+
+	_, err := bs.Update(999, &model.Book{
+		Title: "X", Authors: "Y",
+	})
+	if err == nil {
+		t.Fatal("expected error for nonexistent book")
+	}
+}
+
 func TestBookStore_NominateFromBacklog(t *testing.T) {
 	db := newTestDB(t)
 	bs := store.NewBookStore(db)

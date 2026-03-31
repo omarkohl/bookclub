@@ -776,3 +776,256 @@ func TestAdminBooks_DeleteNonexistent(t *testing.T) {
 		t.Errorf("expected 404, got %d", resp.StatusCode)
 	}
 }
+
+func TestUserBooks_EditOwnNomination(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+	admin := srv.URL + "/api/testclub/admin/testadmin/"
+	user := srv.URL + "/api/testclub/"
+
+	alice := createParticipant(t, admin, "Alice")
+
+	// Create nomination
+	body := bytes.NewBufferString(fmt.Sprintf(
+		`{"title":"Dune","authors":"Frank Herbert","description":"Old desc","participant_id":%d}`, alice.ID))
+	resp, _ := http.Post(user+"books", "application/json", body)
+	var book model.Book
+	json.NewDecoder(resp.Body).Decode(&book)
+	resp.Body.Close()
+
+	// Alice edits her own book (participant_id required for nominated books)
+	body = bytes.NewBufferString(fmt.Sprintf(
+		`{"title":"Dune Messiah","authors":"Frank Herbert","description":"New desc","link":"https://new.com","participant_id":%d}`, alice.ID))
+	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("%sbooks/%d", user, book.ID), body)
+	req.Header.Set("Content-Type", "application/json")
+	resp, _ = http.DefaultClient.Do(req)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var updated model.Book
+	json.NewDecoder(resp.Body).Decode(&updated)
+	resp.Body.Close()
+
+	if updated.Title != "Dune Messiah" {
+		t.Errorf("expected Dune Messiah, got %q", updated.Title)
+	}
+	if updated.Description != "New desc" {
+		t.Errorf("expected New desc, got %q", updated.Description)
+	}
+	if updated.Status != "nominated" {
+		t.Errorf("expected nominated, got %q", updated.Status)
+	}
+}
+
+func TestUserBooks_CannotEditOthersNomination(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+	admin := srv.URL + "/api/testclub/admin/testadmin/"
+	user := srv.URL + "/api/testclub/"
+
+	alice := createParticipant(t, admin, "Alice")
+	bob := createParticipant(t, admin, "Bob")
+
+	// Alice nominates
+	body := bytes.NewBufferString(fmt.Sprintf(
+		`{"title":"Dune","authors":"Frank Herbert","participant_id":%d}`, alice.ID))
+	resp, _ := http.Post(user+"books", "application/json", body)
+	var book model.Book
+	json.NewDecoder(resp.Body).Decode(&book)
+	resp.Body.Close()
+
+	// Bob tries to edit Alice's nomination — should fail
+	body = bytes.NewBufferString(fmt.Sprintf(
+		`{"title":"Changed","authors":"Changed","participant_id":%d}`, bob.ID))
+	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("%sbooks/%d", user, book.ID), body)
+	req.Header.Set("Content-Type", "application/json")
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", resp.StatusCode)
+	}
+}
+
+func TestUserBooks_EditBacklogBook(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+	user := srv.URL + "/api/testclub/"
+
+	// Add to backlog
+	body := bytes.NewBufferString(`{"title":"Dune","authors":"Frank Herbert"}`)
+	resp, _ := http.Post(user+"backlog", "application/json", body)
+	var book model.Book
+	json.NewDecoder(resp.Body).Decode(&book)
+	resp.Body.Close()
+
+	// Edit the backlog book
+	body = bytes.NewBufferString(`{"title":"Dune Messiah","authors":"Frank Herbert","description":"Updated"}`)
+	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("%sbooks/%d", user, book.ID), body)
+	req.Header.Set("Content-Type", "application/json")
+	resp, _ = http.DefaultClient.Do(req)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var updated model.Book
+	json.NewDecoder(resp.Body).Decode(&updated)
+	resp.Body.Close()
+
+	if updated.Title != "Dune Messiah" {
+		t.Errorf("expected Dune Messiah, got %q", updated.Title)
+	}
+	if updated.Status != "backlog" {
+		t.Errorf("expected backlog, got %q", updated.Status)
+	}
+}
+
+func TestUserBooks_EditValidation(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+	admin := srv.URL + "/api/testclub/admin/testadmin/"
+	user := srv.URL + "/api/testclub/"
+
+	alice := createParticipant(t, admin, "Alice")
+
+	body := bytes.NewBufferString(fmt.Sprintf(
+		`{"title":"Dune","authors":"Frank Herbert","participant_id":%d}`, alice.ID))
+	resp, _ := http.Post(user+"books", "application/json", body)
+	var book model.Book
+	json.NewDecoder(resp.Body).Decode(&book)
+	resp.Body.Close()
+
+	// Missing title
+	body = bytes.NewBufferString(`{"authors":"Frank Herbert"}`)
+	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("%sbooks/%d", user, book.ID), body)
+	req.Header.Set("Content-Type", "application/json")
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400 for missing title, got %d", resp.StatusCode)
+	}
+
+	// Missing authors
+	body = bytes.NewBufferString(`{"title":"Dune"}`)
+	req, _ = http.NewRequest(http.MethodPut, fmt.Sprintf("%sbooks/%d", user, book.ID), body)
+	req.Header.Set("Content-Type", "application/json")
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400 for missing authors, got %d", resp.StatusCode)
+	}
+}
+
+func TestAdminBooks_EditBook(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+	admin := srv.URL + "/api/testclub/admin/testadmin/"
+
+	alice := createParticipant(t, admin, "Alice")
+
+	// Admin creates nomination
+	body := bytes.NewBufferString(fmt.Sprintf(
+		`{"title":"Dune","authors":"Frank Herbert","participant_id":%d}`, alice.ID))
+	resp, _ := http.Post(admin+"books/nominate-for-user", "application/json", body)
+	var book model.Book
+	json.NewDecoder(resp.Body).Decode(&book)
+	resp.Body.Close()
+
+	// Admin edits the book
+	body = bytes.NewBufferString(`{"title":"Dune Messiah","authors":"Frank Herbert","description":"Updated"}`)
+	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("%sbooks/%d", admin, book.ID), body)
+	req.Header.Set("Content-Type", "application/json")
+	resp, _ = http.DefaultClient.Do(req)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var updated model.Book
+	json.NewDecoder(resp.Body).Decode(&updated)
+	resp.Body.Close()
+
+	if updated.Title != "Dune Messiah" {
+		t.Errorf("expected Dune Messiah, got %q", updated.Title)
+	}
+}
+
+func TestUserBooks_MoveOwnNominationToBacklog(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+	admin := srv.URL + "/api/testclub/admin/testadmin/"
+	user := srv.URL + "/api/testclub/"
+
+	alice := createParticipant(t, admin, "Alice")
+	bob := createParticipant(t, admin, "Bob")
+
+	// Alice nominates
+	body := bytes.NewBufferString(fmt.Sprintf(
+		`{"title":"Dune","authors":"Frank Herbert","participant_id":%d}`, alice.ID))
+	resp, _ := http.Post(user+"books", "application/json", body)
+	var aliceBook model.Book
+	json.NewDecoder(resp.Body).Decode(&aliceBook)
+	resp.Body.Close()
+
+	// Bob nominates
+	body = bytes.NewBufferString(fmt.Sprintf(
+		`{"title":"Neuromancer","authors":"William Gibson","participant_id":%d}`, bob.ID))
+	resp, _ = http.Post(user+"books", "application/json", body)
+	var bobBook model.Book
+	json.NewDecoder(resp.Body).Decode(&bobBook)
+	resp.Body.Close()
+
+	// Alice moves own nomination to backlog
+	body = bytes.NewBufferString(fmt.Sprintf(`{"participant_id":%d}`, alice.ID))
+	req, _ := http.NewRequest(http.MethodPost,
+		fmt.Sprintf("%sbooks/%d/move-to-backlog", user, aliceBook.ID), body)
+	req.Header.Set("Content-Type", "application/json")
+	resp, _ = http.DefaultClient.Do(req)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var moved model.Book
+	json.NewDecoder(resp.Body).Decode(&moved)
+	resp.Body.Close()
+	if moved.Status != "backlog" {
+		t.Errorf("expected backlog, got %q", moved.Status)
+	}
+
+	// Bob cannot move Alice's (now backlog) book — but let's test Bob can't move his own via wrong ID
+	// Bob tries to move Alice's old book (now backlog, not nominated) — should fail
+	body = bytes.NewBufferString(fmt.Sprintf(`{"participant_id":%d}`, bob.ID))
+	req, _ = http.NewRequest(http.MethodPost,
+		fmt.Sprintf("%sbooks/%d/move-to-backlog", user, bobBook.ID), body)
+	req.Header.Set("Content-Type", "application/json")
+	resp, _ = http.DefaultClient.Do(req)
+	// Bob can move his own — should succeed
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for Bob moving own, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+}
+
+func TestUserBooks_CannotMoveOthersNomination(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+	admin := srv.URL + "/api/testclub/admin/testadmin/"
+	user := srv.URL + "/api/testclub/"
+
+	alice := createParticipant(t, admin, "Alice")
+	bob := createParticipant(t, admin, "Bob")
+
+	// Alice nominates
+	body := bytes.NewBufferString(fmt.Sprintf(
+		`{"title":"Dune","authors":"Frank Herbert","participant_id":%d}`, alice.ID))
+	resp, _ := http.Post(user+"books", "application/json", body)
+	var aliceBook model.Book
+	json.NewDecoder(resp.Body).Decode(&aliceBook)
+	resp.Body.Close()
+
+	// Bob tries to move Alice's nomination to backlog — should fail
+	body = bytes.NewBufferString(fmt.Sprintf(`{"participant_id":%d}`, bob.ID))
+	req, _ := http.NewRequest(http.MethodPost,
+		fmt.Sprintf("%sbooks/%d/move-to-backlog", user, aliceBook.ID), body)
+	req.Header.Set("Content-Type", "application/json")
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", resp.StatusCode)
+	}
+}

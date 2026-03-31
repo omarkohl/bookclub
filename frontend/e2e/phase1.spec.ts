@@ -35,8 +35,8 @@ test.describe("Phase 1: Participants & Identity Selection", () => {
     const items = page.getByRole("listitem");
     await expect(items).toHaveCount(2);
 
-    // Remove Alice
-    await page.getByRole("button", { name: "Remove Alice" }).click();
+    // Delete Alice
+    await page.getByRole("button", { name: "Delete Alice" }).click();
     await expect(items).toHaveCount(1);
     await expect(page.getByText("Alice")).not.toBeVisible();
     await expect(page.getByText("Bob")).toBeVisible();

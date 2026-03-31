@@ -77,17 +77,17 @@ test.describe("Phase 6: Admin Participant & Book Management", () => {
     // Admin removes Alice via UI
     await page.goto(server.adminUrl);
     await expect(
-      page.getByRole("button", { name: "Remove Alice" }),
+      page.getByRole("button", { name: "Delete Alice" }),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Remove Alice" }).click();
+    await page.getByRole("button", { name: "Delete Alice" }).click();
 
     // Alice should disappear from participant list
     await expect(
-      page.getByRole("button", { name: "Remove Alice" }),
+      page.getByRole("button", { name: "Delete Alice" }),
     ).not.toBeVisible();
     // Bob should still be there
     await expect(
-      page.getByRole("button", { name: "Remove Bob" }),
+      page.getByRole("button", { name: "Delete Bob" }),
     ).toBeVisible();
 
     // Alice's nomination (Dune) should move to backlog

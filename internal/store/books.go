@@ -96,6 +96,21 @@ func (s *BookStore) ListAll() ([]model.Book, error) {
 	return books, rows.Err()
 }
 
+func (s *BookStore) Update(id int, book *model.Book) (*model.Book, error) {
+	result, err := s.db.Exec(
+		`UPDATE books SET title = ?, authors = ?, description = ?, link = ? WHERE id = ?`,
+		book.Title, book.Authors, book.Description, book.Link, id,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("update book %d: %w", id, err)
+	}
+	n, _ := result.RowsAffected()
+	if n == 0 {
+		return nil, sql.ErrNoRows
+	}
+	return s.GetByID(id)
+}
+
 func (s *BookStore) MoveToBacklog(id int) error {
 	tx, err := s.db.Begin()
 	if err != nil {

@@ -301,7 +301,7 @@ func New(db *sql.DB, clubSecret, adminSecret string) http.Handler {
 		}
 	})
 
-	// User API: book detail and delete own nomination.
+	// User API: book detail, edit, delete, move-to-backlog.
 	mux.HandleFunc(apiPrefix+"books/", func(w http.ResponseWriter, r *http.Request) {
 		// Handle /books/nominate-from-backlog specially
 		if strings.HasSuffix(r.URL.Path, "/nominate-from-backlog") {
@@ -348,6 +348,46 @@ func New(db *sql.DB, clubSecret, adminSecret string) http.Handler {
 			writeError(w, http.StatusBadRequest, "invalid book ID")
 			return
 		}
+
+		// Handle /books/{id}/move-to-backlog (user can move own nomination)
+		if strings.HasSuffix(r.URL.Path, "/move-to-backlog") {
+			if r.Method != http.MethodPost {
+				writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+				return
+			}
+			var req struct {
+				ParticipantID int `json:"participant_id"`
+			}
+			if err := decodeJSON(r, &req); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid JSON")
+				return
+			}
+			if req.ParticipantID == 0 {
+				writeError(w, http.StatusBadRequest, "participant_id is required")
+				return
+			}
+			book, err := bs.GetByID(id)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					writeError(w, http.StatusNotFound, "book not found")
+					return
+				}
+				writeError(w, http.StatusInternalServerError, "failed to get book")
+				return
+			}
+			if book.NominatedBy == nil || *book.NominatedBy != req.ParticipantID {
+				writeError(w, http.StatusForbidden, "only the nominator can move their nomination to backlog")
+				return
+			}
+			if err := bs.MoveToBacklog(id); err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to move to backlog")
+				return
+			}
+			moved, _ := bs.GetByID(id)
+			writeJSON(w, http.StatusOK, moved)
+			return
+		}
+
 		switch r.Method {
 		case http.MethodGet:
 			book, err := bs.GetByID(id)
@@ -360,6 +400,53 @@ func New(db *sql.DB, clubSecret, adminSecret string) http.Handler {
 				return
 			}
 			writeJSON(w, http.StatusOK, book)
+		case http.MethodPut:
+			var req struct {
+				Title         string `json:"title"`
+				Authors       string `json:"authors"`
+				Description   string `json:"description"`
+				Link          string `json:"link"`
+				ParticipantID int    `json:"participant_id"`
+			}
+			if err := decodeJSON(r, &req); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid JSON")
+				return
+			}
+			req.Title = strings.TrimSpace(req.Title)
+			req.Authors = strings.TrimSpace(req.Authors)
+			if req.Title == "" {
+				writeError(w, http.StatusBadRequest, "title is required")
+				return
+			}
+			if req.Authors == "" {
+				writeError(w, http.StatusBadRequest, "authors is required")
+				return
+			}
+			// Check ownership for nominated books
+			book, err := bs.GetByID(id)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					writeError(w, http.StatusNotFound, "book not found")
+					return
+				}
+				writeError(w, http.StatusInternalServerError, "failed to get book")
+				return
+			}
+			if book.Status == "nominated" && (book.NominatedBy == nil || *book.NominatedBy != req.ParticipantID) {
+				writeError(w, http.StatusForbidden, "only the nominator can edit their nomination")
+				return
+			}
+			updated, err := bs.Update(id, &model.Book{
+				Title:       req.Title,
+				Authors:     req.Authors,
+				Description: req.Description,
+				Link:        req.Link,
+			})
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to update book")
+				return
+			}
+			writeJSON(w, http.StatusOK, updated)
 		case http.MethodDelete:
 			book, err := bs.GetByID(id)
 			if err != nil {
@@ -661,20 +748,56 @@ func New(db *sql.DB, clubSecret, adminSecret string) http.Handler {
 			return
 		}
 
-		// DELETE /books/{id}
-		if r.Method != http.MethodDelete {
-			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
-			return
-		}
-		if err := bs.Delete(id); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				writeError(w, http.StatusNotFound, "book not found")
+		switch r.Method {
+		case http.MethodPut:
+			var req struct {
+				Title       string `json:"title"`
+				Authors     string `json:"authors"`
+				Description string `json:"description"`
+				Link        string `json:"link"`
+			}
+			if err := decodeJSON(r, &req); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid JSON")
 				return
 			}
-			writeError(w, http.StatusInternalServerError, "failed to delete book")
-			return
+			req.Title = strings.TrimSpace(req.Title)
+			req.Authors = strings.TrimSpace(req.Authors)
+			if req.Title == "" {
+				writeError(w, http.StatusBadRequest, "title is required")
+				return
+			}
+			if req.Authors == "" {
+				writeError(w, http.StatusBadRequest, "authors is required")
+				return
+			}
+			updated, err := bs.Update(id, &model.Book{
+				Title:       req.Title,
+				Authors:     req.Authors,
+				Description: req.Description,
+				Link:        req.Link,
+			})
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					writeError(w, http.StatusNotFound, "book not found")
+					return
+				}
+				writeError(w, http.StatusInternalServerError, "failed to update book")
+				return
+			}
+			writeJSON(w, http.StatusOK, updated)
+		case http.MethodDelete:
+			if err := bs.Delete(id); err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					writeError(w, http.StatusNotFound, "book not found")
+					return
+				}
+				writeError(w, http.StatusInternalServerError, "failed to delete book")
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		}
-		w.WriteHeader(http.StatusNoContent)
 	})
 
 	// Serve embedded SPA for club paths.
