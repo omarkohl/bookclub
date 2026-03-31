@@ -16,7 +16,7 @@ build-backend: build-frontend ## Build Go binary with embedded frontend
 lint: lint-frontend lint-backend ## Run all linters
 
 lint-frontend: ## Run ESLint on frontend
-	cd frontend && npx eslint src/
+	cd frontend && npx eslint
 
 lint-backend: ## Run golangci-lint on Go code
 	golangci-lint run ./...
