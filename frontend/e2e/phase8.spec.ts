@@ -256,6 +256,27 @@ test.describe("Phase 8: Book management", () => {
     await adminNomSection.getByRole("button", { name: /delete/i }).click();
   });
 
+  test("admin can add book to backlog", async ({ page }) => {
+    await page.goto(server.adminUrl);
+    const adminBacklog = page.locator("section").filter({
+      has: page.getByRole("heading", { name: "Backlog" }),
+    });
+
+    await adminBacklog.getByRole("button", { name: "Add Book" }).click();
+    await page.getByLabel("Backlog book title").fill("AdminAdded Book");
+    await page.getByLabel("Backlog author(s)").fill("Admin Author");
+    await page.getByRole("button", { name: "Add to Backlog" }).click();
+
+    await expect(adminBacklog.getByText("AdminAdded Book")).toBeVisible();
+
+    // Cleanup
+    page.on("dialog", (dialog) => dialog.accept());
+    await adminBacklog
+      .getByRole("button", { name: /delete.*AdminAdded/i })
+      .click();
+    await expect(adminBacklog.getByText("AdminAdded Book")).not.toBeVisible();
+  });
+
   test("admin can nominate backlog book for a user", async ({ page }) => {
     // Add to backlog via user UI
     await page.goto(server.clubUrl);

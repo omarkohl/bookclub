@@ -10,7 +10,9 @@ import {
   StarIcon,
   CheckIcon,
   XIcon,
+  PlusIcon,
 } from "../components/Icons";
+import { getApiBase } from "../api";
 
 export function AdminPage({ apiBase }: { apiBase: string }) {
   const queryClient = useQueryClient();
@@ -22,6 +24,11 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
   const [nominatingBookId, setNominatingBookId] = useState<number | null>(null);
   const [nominateUserId, setNominateUserId] = useState<number | null>(null);
   const [expandedBookId, setExpandedBookId] = useState<number | null>(null);
+  const [showAddBacklog, setShowAddBacklog] = useState(false);
+  const [addTitle, setAddTitle] = useState("");
+  const [addAuthors, setAddAuthors] = useState("");
+  const [addDescription, setAddDescription] = useState("");
+  const [addLink, setAddLink] = useState("");
   const [budgetConfirm, setBudgetConfirm] = useState<{
     budget: number;
     affectedUsers: number;
@@ -230,6 +237,49 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
       setNominateUserId(null);
     },
   });
+
+  const clubApiBase = getApiBase();
+
+  const addBacklogMutation = useMutation({
+    mutationFn: async (data: {
+      title: string;
+      authors: string;
+      description: string;
+      link: string;
+    }) => {
+      const res = await fetch(`${clubApiBase}/backlog`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.error || "Failed to add to backlog");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "books"] });
+      setAddTitle("");
+      setAddAuthors("");
+      setAddDescription("");
+      setAddLink("");
+      setShowAddBacklog(false);
+    },
+  });
+
+  const handleAddBacklog = (e: React.FormEvent) => {
+    e.preventDefault();
+    const t = addTitle.trim();
+    const a = addAuthors.trim();
+    if (!t || !a) return;
+    addBacklogMutation.mutate({
+      title: t,
+      authors: a,
+      description: addDescription.trim(),
+      link: addLink.trim(),
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -480,7 +530,72 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
       </section>
 
       <section className="mt-8">
-        <h2 className="text-lg font-semibold">Backlog</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Backlog</h2>
+          <button
+            onClick={() => setShowAddBacklog(!showAddBacklog)}
+            className="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+          >
+            {showAddBacklog ? (
+              <>
+                <XIcon /> Cancel
+              </>
+            ) : (
+              <>
+                <PlusIcon /> Add Book
+              </>
+            )}
+          </button>
+        </div>
+
+        {showAddBacklog && (
+          <form onSubmit={handleAddBacklog} className="mt-3 space-y-3">
+            <input
+              type="text"
+              value={addTitle}
+              onChange={(e) => setAddTitle(e.target.value)}
+              placeholder="Book title"
+              maxLength={500}
+              aria-label="Backlog book title"
+              className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+            />
+            <input
+              type="text"
+              value={addAuthors}
+              onChange={(e) => setAddAuthors(e.target.value)}
+              placeholder="Author(s)"
+              maxLength={500}
+              aria-label="Backlog author(s)"
+              className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+            />
+            <textarea
+              value={addDescription}
+              onChange={(e) => setAddDescription(e.target.value)}
+              placeholder="Description (optional)"
+              maxLength={5000}
+              aria-label="Backlog description"
+              rows={2}
+              className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+            />
+            <input
+              type="url"
+              value={addLink}
+              onChange={(e) => setAddLink(e.target.value)}
+              placeholder="Link (optional)"
+              maxLength={2000}
+              aria-label="Backlog link"
+              className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+            />
+            <button
+              type="submit"
+              disabled={addBacklogMutation.isPending}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
+            >
+              <PlusIcon /> Add to Backlog
+            </button>
+          </form>
+        )}
+
         {backlogBooks.length > 0 && (
           <input
             type="text"

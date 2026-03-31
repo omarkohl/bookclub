@@ -23,12 +23,12 @@ test.describe("Phase 1: Participants & Identity Selection", () => {
 
     // Add Alice
     await page.getByLabel("Participant name").fill("Alice");
-    await page.getByRole("button", { name: "Add" }).click();
+    await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(page.getByText("Alice")).toBeVisible();
 
     // Add Bob
     await page.getByLabel("Participant name").fill("Bob");
-    await page.getByRole("button", { name: "Add" }).click();
+    await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(page.getByText("Bob")).toBeVisible();
 
     // Should show both participants
@@ -47,11 +47,11 @@ test.describe("Phase 1: Participants & Identity Selection", () => {
 
     // Bob already exists from previous test — add Charlie, then duplicate
     await page.getByLabel("Participant name").fill("Charlie");
-    await page.getByRole("button", { name: "Add" }).click();
+    await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(page.getByText("Charlie")).toBeVisible();
 
     await page.getByLabel("Participant name").fill("Charlie");
-    await page.getByRole("button", { name: "Add" }).click();
+    await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(page.getByText("participant already exists")).toBeVisible();
   });
 

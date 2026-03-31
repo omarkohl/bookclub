@@ -18,11 +18,11 @@ test.describe("Phase 7: Backlog", () => {
     // Setup: admin adds participants
     await page.goto(server.adminUrl);
     await page.getByLabel("Participant name").fill("Alice");
-    await page.getByRole("button", { name: "Add" }).click();
+    await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(page.getByText("Alice")).toBeVisible();
 
     await page.getByLabel("Participant name").fill("Bob");
-    await page.getByRole("button", { name: "Add" }).click();
+    await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(page.getByText("Bob")).toBeVisible();
 
     // User flow: Alice picks identity
