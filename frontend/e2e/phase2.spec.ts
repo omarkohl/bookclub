@@ -18,11 +18,11 @@ test.describe("Phase 2: Books & Nominations", () => {
     // Setup: admin adds participants
     await page.goto(server.adminUrl);
     await page.getByLabel("Participant name").fill("Alice");
-    await page.getByRole("button", { name: "Add" }).click();
+    await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(page.getByText("Alice")).toBeVisible();
 
     await page.getByLabel("Participant name").fill("Bob");
-    await page.getByRole("button", { name: "Add" }).click();
+    await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(page.getByText("Bob")).toBeVisible();
 
     // User flow: Alice picks identity and nominates
@@ -112,15 +112,18 @@ test.describe("Phase 2: Books & Nominations", () => {
     });
     await expect(bookItem).toBeVisible();
 
-    // Description and link should NOT be visible yet
+    // Description is shown as preview; link is hidden until expanded
     await expect(
       bookItem.getByText("A far-future pilgrimage tale"),
+    ).toBeVisible();
+    await expect(
+      bookItem.getByRole("link", { name: "https://example.com/hyperion" }),
     ).not.toBeVisible();
 
-    // Click the book title to expand details
-    await bookItem.getByText("Hyperion", { exact: false }).first().click();
+    // Click "more" to expand details
+    await bookItem.getByRole("button", { name: "more" }).click();
 
-    // Now description and link should be visible
+    // Now both description and link are visible
     await expect(
       bookItem.getByText("A far-future pilgrimage tale"),
     ).toBeVisible();
@@ -128,10 +131,10 @@ test.describe("Phase 2: Books & Nominations", () => {
       bookItem.getByRole("link", { name: "https://example.com/hyperion" }),
     ).toBeVisible();
 
-    // Click again to collapse
-    await bookItem.getByText("Hyperion", { exact: false }).first().click();
+    // Click "less" to collapse
+    await bookItem.getByRole("button", { name: "less" }).click();
     await expect(
-      bookItem.getByText("A far-future pilgrimage tale"),
+      bookItem.getByRole("link", { name: "https://example.com/hyperion" }),
     ).not.toBeVisible();
   });
 });

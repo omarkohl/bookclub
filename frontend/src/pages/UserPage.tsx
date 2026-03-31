@@ -1,141 +1,16 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
-interface Participant {
-  id: number;
-  name: string;
-}
-
-interface Book {
-  id: number;
-  title: string;
-  authors: string;
-  description?: string;
-  link?: string;
-  nominated_by: number | null;
-  status: string;
-  created_at: string;
-}
-
-interface Settings {
-  credit_budget: number;
-  voting_state: string;
-  pins_enabled: boolean;
-}
-
-interface Vote {
-  participant_id: number;
-  book_id: number;
-  credits: number;
-}
-
-interface BookScore {
-  book_id: number;
-  score: number;
-}
-
-// --- SVG Icons ---
-function PencilIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="inline h-4 w-4"
-    >
-      <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
-    </svg>
-  );
-}
-function TrashIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="inline h-4 w-4"
-    >
-      <path
-        fillRule="evenodd"
-        d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-}
-function ArchiveIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="inline h-4 w-4"
-    >
-      <path d="M2 3a1 1 0 00-1 1v1a1 1 0 001 1h16a1 1 0 001-1V4a1 1 0 00-1-1H2z" />
-      <path
-        fillRule="evenodd"
-        d="M2 7.5h16l-.811 7.71a2 2 0 01-1.99 1.79H4.802a2 2 0 01-1.99-1.79L2 7.5zm5.22 1.72a.75.75 0 011.06 0L10 10.94l1.72-1.72a.75.75 0 111.06 1.06l-2.25 2.25a.75.75 0 01-1.06 0L7.22 10.28a.75.75 0 010-1.06z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-}
-function StarIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="inline h-4 w-4"
-    >
-      <path
-        fillRule="evenodd"
-        d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382-1.831-4.401z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-}
-function CheckIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="inline h-4 w-4"
-    >
-      <path
-        fillRule="evenodd"
-        d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-}
-function XIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="inline h-4 w-4"
-    >
-      <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-    </svg>
-  );
-}
-function PlusIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="inline h-4 w-4"
-    >
-      <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-    </svg>
-  );
-}
+import type { Participant, Book, Settings, Vote, BookScore } from "../types";
+import { BookCard } from "../components/BookCard";
+import { BookEditForm } from "../components/BookEditForm";
+import {
+  PencilIcon,
+  TrashIcon,
+  ArchiveIcon,
+  StarIcon,
+  PlusIcon,
+  XIcon,
+} from "../components/Icons";
 
 const STORAGE_KEY = "bookclub_participant_id";
 
@@ -295,98 +170,6 @@ export function UserPage({ apiBase }: { apiBase: string }) {
   );
 }
 
-function BookEditForm({
-  book,
-  onSave,
-  onCancel,
-  isPending,
-}: {
-  book: Book;
-  onSave: (data: {
-    title: string;
-    authors: string;
-    description: string;
-    link: string;
-  }) => void;
-  onCancel: () => void;
-  isPending: boolean;
-}) {
-  const [title, setTitle] = useState(book.title);
-  const [authors, setAuthors] = useState(book.authors);
-  const [description, setDescription] = useState(book.description ?? "");
-  const [link, setLink] = useState(book.link ?? "");
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const t = title.trim();
-    const a = authors.trim();
-    if (!t || !a) return;
-    onSave({
-      title: t,
-      authors: a,
-      description: description.trim(),
-      link: link.trim(),
-    });
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-3">
-      <input
-        type="text"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Book title"
-        maxLength={500}
-        aria-label="Edit book title"
-        className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
-      />
-      <input
-        type="text"
-        value={authors}
-        onChange={(e) => setAuthors(e.target.value)}
-        placeholder="Author(s)"
-        maxLength={500}
-        aria-label="Edit author(s)"
-        className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
-      />
-      <textarea
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        placeholder="Description (optional)"
-        maxLength={5000}
-        aria-label="Edit description"
-        rows={2}
-        className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
-      />
-      <input
-        type="url"
-        value={link}
-        onChange={(e) => setLink(e.target.value)}
-        placeholder="Link (optional)"
-        maxLength={2000}
-        aria-label="Edit link"
-        className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
-      />
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
-        >
-          <CheckIcon /> Save
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
-        >
-          <XIcon /> Cancel
-        </button>
-      </div>
-    </form>
-  );
-}
-
 function NominationSection({
   apiBase,
   participantId,
@@ -404,6 +187,8 @@ function NominationSection({
   const [link, setLink] = useState("");
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const nominateMutation = useMutation({
     mutationFn: async (data: {
@@ -432,6 +217,7 @@ function NominationSection({
       setDescription("");
       setLink("");
       setError("");
+      setShowForm(false);
     },
     onError: (err: Error) => setError(err.message),
   });
@@ -527,44 +313,48 @@ function NominationSection({
             />
           </div>
         ) : (
-          <div className="mt-3 rounded-lg border border-stone-200 bg-white p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-medium">{myNomination.title}</p>
-                <p className="text-sm text-stone-500">{myNomination.authors}</p>
-                {myNomination.description && (
-                  <p className="mt-2 text-sm text-stone-600">
-                    {myNomination.description}
-                  </p>
-                )}
-              </div>
-              <div className="ml-4 flex gap-1">
-                <button
-                  onClick={() => setEditing(true)}
-                  aria-label="Edit nomination"
-                  className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
-                >
-                  <PencilIcon /> Edit
-                </button>
-                <button
-                  onClick={() => moveToBacklogMutation.mutate(myNomination.id)}
-                  disabled={moveToBacklogMutation.isPending}
-                  aria-label="Move to backlog"
-                  className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
-                >
-                  <ArchiveIcon /> Backlog
-                </button>
-                <button
-                  onClick={() => handleDelete(myNomination.id)}
-                  disabled={deleteMutation.isPending}
-                  aria-label="Delete nomination"
-                  className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-sm text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 disabled:opacity-50"
-                >
-                  <TrashIcon /> Delete
-                </button>
-              </div>
-            </div>
-          </div>
+          <ul className="mt-3 divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
+            <li className="px-4 py-3">
+              <BookCard
+                book={myNomination}
+                expanded={expandedId === myNomination.id}
+                onToggle={() =>
+                  setExpandedId(
+                    expandedId === myNomination.id ? null : myNomination.id,
+                  )
+                }
+                actions={
+                  <>
+                    <button
+                      onClick={() => setEditing(true)}
+                      aria-label="Edit nomination"
+                      className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+                    >
+                      <PencilIcon /> Edit
+                    </button>
+                    <button
+                      onClick={() =>
+                        moveToBacklogMutation.mutate(myNomination.id)
+                      }
+                      disabled={moveToBacklogMutation.isPending}
+                      aria-label="Move to backlog"
+                      className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
+                    >
+                      <ArchiveIcon /> Backlog
+                    </button>
+                    <button
+                      onClick={() => handleDelete(myNomination.id)}
+                      disabled={deleteMutation.isPending}
+                      aria-label="Delete nomination"
+                      className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 disabled:opacity-50"
+                    >
+                      <TrashIcon /> Delete
+                    </button>
+                  </>
+                }
+              />
+            </li>
+          </ul>
         )
       ) : (
         <p className="mt-2 text-sm text-stone-500">
@@ -573,63 +363,84 @@ function NominationSection({
       )}
 
       <div className="mt-4">
-        <h3 className="text-sm font-medium text-stone-700">
-          {myNomination ? "Nominate a different book" : "Nominate a book"}
-        </h3>
-        <p className="mt-1 text-xs text-stone-400">
-          Check the backlog below first — the book might already be there.
-          {myNomination &&
-            " Your current nomination will be moved to the backlog."}
-        </p>
-        <form onSubmit={handleSubmit} className="mt-3 space-y-3">
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Book title"
-            maxLength={500}
-            aria-label="Book title"
-            className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
-          />
-          <input
-            type="text"
-            value={authors}
-            onChange={(e) => setAuthors(e.target.value)}
-            placeholder="Author(s)"
-            maxLength={500}
-            aria-label="Author(s)"
-            className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
-          />
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Description (optional)"
-            maxLength={5000}
-            aria-label="Description"
-            rows={2}
-            className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
-          />
-          <input
-            type="url"
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-            placeholder="Link (optional)"
-            maxLength={2000}
-            aria-label="Link"
-            className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
-          />
+        {myNomination ? (
           <button
-            type="submit"
-            disabled={nominateMutation.isPending}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
+            onClick={() => setShowForm(!showForm)}
+            className="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
           >
-            <StarIcon /> Nominate
+            {showForm ? (
+              <>
+                <XIcon /> Cancel
+              </>
+            ) : (
+              <>
+                <PlusIcon /> Nominate a different book
+              </>
+            )}
           </button>
-        </form>
-        {error && (
-          <p role="alert" className="mt-2 text-sm text-red-600">
-            {error}
-          </p>
+        ) : (
+          <h3 className="text-sm font-medium text-stone-700">
+            Nominate a book
+          </h3>
+        )}
+        {(showForm || !myNomination) && (
+          <>
+            <p className="mt-1 text-xs text-stone-400">
+              Check the backlog below first — the book might already be there.
+              {myNomination &&
+                " Your current nomination will be moved to the backlog."}
+            </p>
+            <form onSubmit={handleSubmit} className="mt-3 space-y-3">
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Book title"
+                maxLength={500}
+                aria-label="Book title"
+                className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+              />
+              <input
+                type="text"
+                value={authors}
+                onChange={(e) => setAuthors(e.target.value)}
+                placeholder="Author(s)"
+                maxLength={500}
+                aria-label="Author(s)"
+                className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+              />
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Description (optional)"
+                maxLength={5000}
+                aria-label="Description"
+                rows={2}
+                className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+              />
+              <input
+                type="url"
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+                placeholder="Link (optional)"
+                maxLength={2000}
+                aria-label="Link"
+                className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+              />
+              <button
+                type="submit"
+                disabled={nominateMutation.isPending}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
+              >
+                <StarIcon /> Nominate
+              </button>
+            </form>
+            {error && (
+              <p role="alert" className="mt-2 text-sm text-red-600">
+                {error}
+              </p>
+            )}
+          </>
         )}
       </div>
     </section>
@@ -654,6 +465,7 @@ function BacklogSection({
   const [description, setDescription] = useState("");
   const [link, setLink] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const { data: backlog = [] } = useQuery<Book[]>({
     queryKey: ["backlog"],
@@ -886,46 +698,43 @@ function BacklogSection({
                 />
               </li>
             ) : (
-              <li
-                key={book.id}
-                className="flex items-center justify-between px-4 py-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{book.title}</p>
-                  <p className="text-xs text-stone-500">{book.authors}</p>
-                  {book.description && (
-                    <p className="mt-1 text-xs text-stone-400 line-clamp-2">
-                      {book.description}
-                    </p>
-                  )}
-                </div>
-                <div className="ml-4 flex gap-1">
-                  <button
-                    onClick={() => setEditingId(book.id)}
-                    aria-label={`Edit ${book.title}`}
-                    className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
-                  >
-                    <PencilIcon /> Edit
-                  </button>
-                  {!isRevealed && (
-                    <button
-                      onClick={() => nominateMutation.mutate(book.id)}
-                      disabled={nominateMutation.isPending}
-                      aria-label={`Nominate ${book.title}`}
-                      className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
-                    >
-                      <StarIcon /> Nominate
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleDelete(book.id)}
-                    disabled={deleteMutation.isPending}
-                    aria-label={`Delete ${book.title}`}
-                    className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-sm text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 disabled:opacity-50"
-                  >
-                    <TrashIcon /> Delete
-                  </button>
-                </div>
+              <li key={book.id} className="px-4 py-3">
+                <BookCard
+                  book={book}
+                  expanded={expandedId === book.id}
+                  onToggle={() =>
+                    setExpandedId(expandedId === book.id ? null : book.id)
+                  }
+                  actions={
+                    <>
+                      <button
+                        onClick={() => setEditingId(book.id)}
+                        aria-label={`Edit ${book.title}`}
+                        className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+                      >
+                        <PencilIcon /> Edit
+                      </button>
+                      {!isRevealed && (
+                        <button
+                          onClick={() => nominateMutation.mutate(book.id)}
+                          disabled={nominateMutation.isPending}
+                          aria-label={`Nominate ${book.title}`}
+                          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
+                        >
+                          <StarIcon /> Nominate
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDelete(book.id)}
+                        disabled={deleteMutation.isPending}
+                        aria-label={`Delete ${book.title}`}
+                        className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 disabled:opacity-50"
+                      >
+                        <TrashIcon /> Delete
+                      </button>
+                    </>
+                  }
+                />
               </li>
             ),
           )}
@@ -1093,61 +902,34 @@ function VotingSection({
           const currentCredits = allocations.get(book.id) ?? 0;
           const score = scoreMap.get(book.id);
 
-          const isExpanded = expandedBookId === book.id;
-          const hasDetails = !!book.description || !!book.link;
-
           return (
             <li key={book.id} className="px-4 py-3">
-              <div className="flex items-start justify-between">
-                <div
-                  className={`min-w-0 flex-1${hasDetails ? " cursor-pointer" : ""}`}
-                  onClick={() =>
-                    hasDetails && setExpandedBookId(isExpanded ? null : book.id)
-                  }
-                >
-                  <p className="font-medium">
-                    {book.title}
-                    {book.nominated_by === participantId && (
-                      <span className="ml-2 text-xs text-stone-400">
-                        (yours)
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-sm text-stone-500">{book.authors}</p>
-                  {book.nominated_by && (
-                    <p className="text-xs text-stone-400">
-                      Nominated by{" "}
-                      {participantMap.get(book.nominated_by) ?? "Unknown"}
-                    </p>
-                  )}
-                  {isExpanded && (
-                    <div className="mt-2 space-y-1">
-                      {book.description && (
-                        <p className="text-sm text-stone-600">
-                          {book.description}
-                        </p>
-                      )}
-                      {book.link && (
-                        <a
-                          href={book.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-600 underline hover:text-blue-800"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {book.link}
-                        </a>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div className="ml-4 flex items-center gap-3">
-                  {isRevealed ? (
-                    <div className="text-right">
-                      <p className="text-lg font-semibold">
-                        {score?.toFixed(2) ?? "0.00"}
+              <BookCard
+                book={book}
+                expanded={expandedBookId === book.id}
+                onToggle={() =>
+                  setExpandedBookId(expandedBookId === book.id ? null : book.id)
+                }
+                meta={
+                  <>
+                    {book.nominated_by && (
+                      <p className="text-xs text-stone-400">
+                        Nominated by{" "}
+                        {participantMap.get(book.nominated_by) ?? "Unknown"}
+                        {book.nominated_by === participantId && (
+                          <span className="ml-1">(yours)</span>
+                        )}
                       </p>
-                      <p className="text-xs text-stone-400">score</p>
+                    )}
+                  </>
+                }
+                actions={
+                  isRevealed ? (
+                    <div className="text-right">
+                      <span className="text-lg font-semibold">
+                        {score?.toFixed(2) ?? "0.00"}
+                      </span>
+                      <span className="ml-1 text-xs text-stone-400">score</span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
@@ -1169,9 +951,9 @@ function VotingSection({
                       />
                       <span className="text-xs text-stone-400">credits</span>
                     </div>
-                  )}
-                </div>
-              </div>
+                  )
+                }
+              />
             </li>
           );
         })}
