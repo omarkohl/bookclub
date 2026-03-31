@@ -22,6 +22,13 @@
 - Frontend: Playwright for e2e, Vitest only for complex UI logic
 - Do not test internals — test behavior from the user's perspective
 
+## Working Directory
+
+- Frontend lives in `frontend/` subdir — run all frontend commands (Playwright, npm, eslint, prettier) from there
+- Go backend and `Makefile` are at the top level — run `make`, `go test`, etc. from the project root
+- The Makefile `cd`s into `frontend/` where needed
+- If you encounter unexpected errors, **check the cwd first**
+
 ## Architecture
 
 - See [docs/design.md](docs/design.md) for the full design
