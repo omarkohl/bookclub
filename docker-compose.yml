@@ -1,0 +1,15 @@
+services:
+  bookclub:
+    image: omarkohl/bookclub:latest
+    ports:
+      - "${BOOKCLUB_PORT:-8080}:8080"
+    environment:
+      BOOKCLUB_CLUB_SECRET: ${BOOKCLUB_CLUB_SECRET:?Set BOOKCLUB_CLUB_SECRET in .env}
+      BOOKCLUB_ADMIN_SECRET: ${BOOKCLUB_ADMIN_SECRET:?Set BOOKCLUB_ADMIN_SECRET in .env}
+      BOOKCLUB_DB_PATH: /data/bookclub.db
+    volumes:
+      - bookclub-data:/data
+    restart: unless-stopped
+
+volumes:
+  bookclub-data:

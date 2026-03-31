@@ -92,6 +92,23 @@ Custom server or secrets:
 go run ./cmd/seed -base-url http://localhost:9090 -club myclub -admin myadmin
 ```
 
+## Releasing
+
+Push a version tag to trigger the [release workflow](../.github/workflows/release.yml):
+
+```sh
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+This builds:
+- **Binaries** for Linux, macOS, and Windows (amd64 + arm64) — attached to a GitHub release with auto-generated notes
+- **Docker image** (multi-arch amd64 + arm64) — pushed to Docker Hub as `omarkohl/bookclub:1.2.3`, `omarkohl/bookclub:1.2`, `omarkohl/bookclub:1`
+
+Required GitHub repository secrets (**Settings → Secrets → Actions**):
+- `DOCKERHUB_USERNAME` — Docker Hub username
+- `DOCKERHUB_TOKEN` — Docker Hub access token (**Docker Hub → Account Settings → Security → Access Tokens**)
+
 ## Project Structure
 
 ```
