@@ -32,6 +32,8 @@ fmt-check: ## Check formatting without modifying files
 test: test-backend test-frontend ## Run all tests
 
 test-backend: ## Run Go integration tests
+	@mkdir -p internal/handler/frontend
+	@test -f internal/handler/frontend/index.html || echo '<!DOCTYPE html><html><body>placeholder</body></html>' > internal/handler/frontend/index.html
 	go test ./... -v
 
 test-frontend: ## Run frontend tests (Vitest)

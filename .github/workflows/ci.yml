@@ -37,6 +37,9 @@ jobs:
       - name: Lint frontend
         run: make lint-frontend
 
+      - name: Create embed placeholder for linter
+        run: mkdir -p internal/handler/frontend && echo '<!DOCTYPE html>' > internal/handler/frontend/index.html
+
       - name: Lint backend
         uses: golangci/golangci-lint-action@v9
         with:
