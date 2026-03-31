@@ -56,7 +56,30 @@ func (s *ParticipantStore) List() ([]model.Participant, error) {
 }
 
 func (s *ParticipantStore) Delete(id int) error {
-	result, err := s.db.Exec("DELETE FROM participants WHERE id = ?", id)
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Delete votes on books nominated by this participant.
+	_, err = tx.Exec(
+		"DELETE FROM votes WHERE book_id IN (SELECT id FROM books WHERE nominated_by = ?)", id,
+	)
+	if err != nil {
+		return fmt.Errorf("delete votes on participant %d books: %w", id, err)
+	}
+
+	// Move nominations to backlog (clear nominated_by to avoid FK conflict).
+	_, err = tx.Exec(
+		"UPDATE books SET status = 'backlog', nominated_by = NULL WHERE nominated_by = ?", id,
+	)
+	if err != nil {
+		return fmt.Errorf("move books to backlog for participant %d: %w", id, err)
+	}
+
+	// Delete the participant (their own votes cascade via FK).
+	result, err := tx.Exec("DELETE FROM participants WHERE id = ?", id)
 	if err != nil {
 		return fmt.Errorf("delete participant %d: %w", id, err)
 	}
@@ -64,5 +87,6 @@ func (s *ParticipantStore) Delete(id int) error {
 	if n == 0 {
 		return sql.ErrNoRows
 	}
-	return nil
+
+	return tx.Commit()
 }

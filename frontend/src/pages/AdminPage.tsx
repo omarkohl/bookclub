@@ -150,6 +150,7 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "participants"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "books"] });
     },
   });
 

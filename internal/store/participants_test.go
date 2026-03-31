@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/omar/bookclub/internal/model"
 	"github.com/omar/bookclub/internal/store"
 )
 
@@ -104,6 +105,115 @@ func TestParticipantStore_EmptyName(t *testing.T) {
 	_, err := ps.Create("")
 	if err == nil {
 		t.Fatal("expected error for empty name")
+	}
+}
+
+func TestParticipantStore_DeleteWithNomination(t *testing.T) {
+	db := newTestDB(t)
+	ps := store.NewParticipantStore(db)
+	bs := store.NewBookStore(db)
+	vs := store.NewVoteStore(db)
+
+	alice := createTestParticipant(t, db, "Alice")
+	bob := createTestParticipant(t, db, "Bob")
+
+	// Alice nominates a book
+	book, err := bs.Create(&model.Book{
+		Title:       "Dune",
+		Authors:     "Frank Herbert",
+		NominatedBy: &alice.ID,
+		Status:      "nominated",
+	})
+	if err != nil {
+		t.Fatalf("Create book: %v", err)
+	}
+
+	// Bob votes on Alice's book
+	err = vs.Set(bob.ID, []model.Vote{{BookID: book.ID, Credits: 25}})
+	if err != nil {
+		t.Fatalf("Set votes: %v", err)
+	}
+
+	// Delete Alice — should cascade: delete votes on her book, delete her book, then delete her
+	if err := ps.Delete(alice.ID); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+
+	// Alice should be gone
+	_, err = ps.GetByID(alice.ID)
+	if err == nil {
+		t.Error("expected error getting deleted participant")
+	}
+
+	// Her book should be in backlog
+	got, err := bs.GetByID(book.ID)
+	if err != nil {
+		t.Fatalf("expected book to still exist in backlog: %v", err)
+	}
+	if got.Status != "backlog" {
+		t.Errorf("expected status backlog, got %q", got.Status)
+	}
+	if got.NominatedBy != nil {
+		t.Errorf("expected nominated_by to be nil, got %v", got.NominatedBy)
+	}
+
+	// Bob's votes on her book should be gone
+	votes, err := vs.GetByParticipant(bob.ID)
+	if err != nil {
+		t.Fatalf("GetByParticipant: %v", err)
+	}
+	if len(votes) != 0 {
+		t.Errorf("expected 0 votes, got %d", len(votes))
+	}
+
+	// Bob should still exist
+	_, err = ps.GetByID(bob.ID)
+	if err != nil {
+		t.Error("Bob should still exist")
+	}
+}
+
+func TestParticipantStore_DeleteWithVotesOnly(t *testing.T) {
+	db := newTestDB(t)
+	ps := store.NewParticipantStore(db)
+	bs := store.NewBookStore(db)
+	vs := store.NewVoteStore(db)
+
+	alice := createTestParticipant(t, db, "Alice")
+	bob := createTestParticipant(t, db, "Bob")
+
+	// Bob nominates a book
+	book, err := bs.Create(&model.Book{
+		Title:       "Dune",
+		Authors:     "Frank Herbert",
+		NominatedBy: &bob.ID,
+		Status:      "nominated",
+	})
+	if err != nil {
+		t.Fatalf("Create book: %v", err)
+	}
+
+	// Alice votes on Bob's book
+	err = vs.Set(alice.ID, []model.Vote{{BookID: book.ID, Credits: 25}})
+	if err != nil {
+		t.Fatalf("Set votes: %v", err)
+	}
+
+	// Delete Alice — she has votes but no nomination
+	if err := ps.Delete(alice.ID); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+
+	// Alice should be gone
+	_, err = ps.GetByID(alice.ID)
+	if err == nil {
+		t.Error("expected error getting deleted participant")
+	}
+
+	// Bob's book should still exist
+	_, err = bs.GetByID(book.ID)
+	if err != nil {
+		t.Error("Bob's book should still exist")
 	}
 }
 

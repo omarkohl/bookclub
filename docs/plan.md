@@ -67,12 +67,12 @@ Thin end-to-end slices — each phase results in something a tester can interact
 **Testable:** Admin adjusts credit budget, affected users' votes are reset.
 
 ## Phase 6: Admin Participant & Book Management
-- [ ] API: remove participant (transaction: delete their nomination + its votes, then delete participant; cascade handles their own votes and sessions)
+- [x] API: remove participant (transaction: move nomination to backlog + delete its votes, then delete participant; cascade handles their own votes)
 - [x] API: admin delete any book permanently (done in Phase 2)
 - [x] API: admin set nomination for any user (done in Phase 2)
-- [ ] Admin UI: participant removal
+- [x] Admin UI: participant removal (invalidates both participant and book queries)
 - [x] Admin UI: book deletion, set nomination for user (done in Phase 2)
-- [ ] Playwright: admin removes participant, deletes book, sets nomination for user
+- [x] Playwright: admin removes participant, verifies cascade (nomination to backlog, votes cleared)
 
 **Testable:** Admin manages participants and books with proper cascade behavior.
 
