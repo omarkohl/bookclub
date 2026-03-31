@@ -340,7 +340,7 @@ function NominationSection({
                       aria-label="Move to backlog"
                       className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
                     >
-                      <ArchiveIcon /> Backlog
+                      <ArchiveIcon /> Move to Backlog
                     </button>
                     <button
                       onClick={() => handleDelete(myNomination.id)}
@@ -947,7 +947,7 @@ function VotingSection({
                           setCredits(book.id, Math.max(0, val));
                         }}
                         aria-label={`Credits for ${book.title}`}
-                        className="w-20 rounded-md border border-stone-300 px-2 py-1 text-right text-sm focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+                        className="w-20 rounded-md border border-stone-300 px-3 py-2 text-right text-sm focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
                       />
                       <span className="text-xs text-stone-400">credits</span>
                     </div>

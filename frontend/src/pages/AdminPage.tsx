@@ -459,7 +459,7 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
                           aria-label={`Move ${book.title} to backlog`}
                           className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
                         >
-                          <ArchiveIcon /> Backlog
+                          <ArchiveIcon /> Move to Backlog
                         </button>
                         <button
                           onClick={() => handleDeleteBook(book.id)}
