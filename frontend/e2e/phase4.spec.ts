@@ -118,7 +118,7 @@ test.describe("Phase 4: Voting State & Results", () => {
     ).not.toBeVisible();
   });
 
-  test("nominations are frozen when results revealed", async ({ page }) => {
+  test("nominations are frozen when results revealed", async () => {
     // Try to nominate via API — should be rejected
     const res = await fetch(`${server.apiBase}/books`, {
       method: "POST",
