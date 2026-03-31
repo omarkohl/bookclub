@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Participant, Book, Settings, Vote, BookScore } from "../types";
 import { BookCard } from "../components/BookCard";
@@ -849,6 +849,13 @@ function VotingSection({
       queryClient.invalidateQueries({ queryKey: ["votes", participantId] });
     },
   });
+
+  useEffect(() => {
+    if (voteMutation.isSuccess) {
+      const timer = setTimeout(voteMutation.reset, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [voteMutation.isSuccess, voteMutation.reset]);
 
   const handleSave = () => {
     const votes: { book_id: number; credits: number }[] = [];
