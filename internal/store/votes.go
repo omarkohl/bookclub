@@ -78,32 +78,50 @@ func (s *VoteStore) TotalCredits(participantID int) (int, error) {
 	return total, nil
 }
 
-// Scores computes QV scores (SUM(sqrt(credits))) per book.
+// Scores computes QV scores (SUM(sqrt(credits))) per book, including per-participant vote details.
 func (s *VoteStore) Scores() ([]model.BookScore, error) {
 	rows, err := s.db.Query(
-		"SELECT book_id, credits FROM votes",
+		`SELECT v.book_id, p.name, v.credits
+		 FROM votes v
+		 JOIN participants p ON p.id = v.participant_id`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get all votes: %w", err)
 	}
 	defer func() { _ = rows.Close() }()
 
-	// Aggregate in Go since SQLite doesn't have sqrt()
-	scoreMap := make(map[int]float64)
+	type bookData struct {
+		score float64
+		votes []model.VoteDetail
+	}
+	dataMap := make(map[int]*bookData)
+
 	for rows.Next() {
 		var bookID, credits int
-		if err := rows.Scan(&bookID, &credits); err != nil {
+		var participantName string
+		if err := rows.Scan(&bookID, &participantName, &credits); err != nil {
 			return nil, fmt.Errorf("scan vote: %w", err)
 		}
-		scoreMap[bookID] += math.Sqrt(float64(credits))
+		if _, ok := dataMap[bookID]; !ok {
+			dataMap[bookID] = &bookData{}
+		}
+		dataMap[bookID].score += math.Sqrt(float64(credits))
+		dataMap[bookID].votes = append(dataMap[bookID].votes, model.VoteDetail{
+			ParticipantName: participantName,
+			Credits:         credits,
+		})
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
-	scores := make([]model.BookScore, 0, len(scoreMap))
-	for bookID, score := range scoreMap {
-		scores = append(scores, model.BookScore{BookID: bookID, Score: math.Round(score*100) / 100})
+	scores := make([]model.BookScore, 0, len(dataMap))
+	for bookID, data := range dataMap {
+		scores = append(scores, model.BookScore{
+			BookID: bookID,
+			Score:  math.Round(data.score*100) / 100,
+			Votes:  data.votes,
+		})
 	}
 	return scores, nil
 }

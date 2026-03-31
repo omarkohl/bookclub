@@ -31,8 +31,15 @@ type Vote struct {
 	Credits       int `json:"credits"`
 }
 
-// BookScore holds a book's aggregated QV score.
+// VoteDetail holds a participant's credit allocation for a book.
+type VoteDetail struct {
+	ParticipantName string `json:"participant_name"`
+	Credits         int    `json:"credits"`
+}
+
+// BookScore holds a book's aggregated QV score and per-participant vote details.
 type BookScore struct {
-	BookID int     `json:"book_id"`
-	Score  float64 `json:"score"`
+	BookID int          `json:"book_id"`
+	Score  float64      `json:"score"`
+	Votes  []VoteDetail `json:"votes"`
 }

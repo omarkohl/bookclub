@@ -27,7 +27,13 @@ export interface Vote {
   credits: number;
 }
 
+export interface VoteDetail {
+  participant_name: string;
+  credits: number;
+}
+
 export interface BookScore {
   book_id: number;
   score: number;
+  votes: VoteDetail[];
 }

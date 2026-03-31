@@ -1029,3 +1029,85 @@ func TestUserBooks_CannotMoveOthersNomination(t *testing.T) {
 		t.Errorf("expected 403, got %d", resp.StatusCode)
 	}
 }
+
+func TestScores_BlockedWhenNotRevealed(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+	user := srv.URL + "/api/testclub/"
+
+	resp, _ := http.Get(user + "scores")
+	if resp.StatusCode != http.StatusConflict {
+		t.Errorf("expected 409 when voting not revealed, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+}
+
+func TestScores_IncludesVoteDetails(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+	admin := srv.URL + "/api/testclub/admin/testadmin/"
+	user := srv.URL + "/api/testclub/"
+
+	alice := createParticipant(t, admin, "Alice")
+	bob := createParticipant(t, admin, "Bob")
+
+	// Alice nominates a book
+	body := bytes.NewBufferString(fmt.Sprintf(
+		`{"title":"Dune","authors":"Frank Herbert","participant_id":%d}`, alice.ID))
+	resp, _ := http.Post(user+"books", "application/json", body)
+	var book model.Book
+	json.NewDecoder(resp.Body).Decode(&book)
+	resp.Body.Close()
+
+	// Alice votes 16 credits, Bob votes 25 credits
+	body = bytes.NewBufferString(fmt.Sprintf(
+		`{"participant_id":%d,"votes":[{"book_id":%d,"credits":16}]}`, alice.ID, book.ID))
+	resp, _ = http.Post(user+"votes", "application/json", body)
+	resp.Body.Close()
+
+	body = bytes.NewBufferString(fmt.Sprintf(
+		`{"participant_id":%d,"votes":[{"book_id":%d,"credits":25}]}`, bob.ID, book.ID))
+	resp, _ = http.Post(user+"votes", "application/json", body)
+	resp.Body.Close()
+
+	// Reveal voting
+	body = bytes.NewBufferString(`{"credit_budget":100,"voting_state":"revealed","pins_enabled":false}`)
+	req, _ := http.NewRequest(http.MethodPut, admin+"settings", body)
+	req.Header.Set("Content-Type", "application/json")
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+
+	// Fetch scores
+	resp, _ = http.Get(user + "scores")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var scores []model.BookScore
+	json.NewDecoder(resp.Body).Decode(&scores)
+	resp.Body.Close()
+
+	if len(scores) != 1 {
+		t.Fatalf("expected 1 score, got %d", len(scores))
+	}
+	s := scores[0]
+	if s.BookID != book.ID {
+		t.Errorf("unexpected book_id %d", s.BookID)
+	}
+	// score: sqrt(16) + sqrt(25) = 4 + 5 = 9
+	if s.Score != 9.0 {
+		t.Errorf("expected score 9.0, got %.2f", s.Score)
+	}
+	if len(s.Votes) != 2 {
+		t.Fatalf("expected 2 vote details, got %d", len(s.Votes))
+	}
+	votesByName := make(map[string]int)
+	for _, v := range s.Votes {
+		votesByName[v.ParticipantName] = v.Credits
+	}
+	if votesByName["Alice"] != 16 {
+		t.Errorf("Alice credits: expected 16, got %d", votesByName["Alice"])
+	}
+	if votesByName["Bob"] != 25 {
+		t.Errorf("Bob credits: expected 25, got %d", votesByName["Bob"])
+	}
+}

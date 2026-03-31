@@ -137,18 +137,43 @@ func TestVoteStore_Scores(t *testing.T) {
 		t.Fatalf("Scores: %v", err)
 	}
 
-	scoreMap := make(map[int]float64)
+	scoreMap := make(map[int]model.BookScore)
 	for _, s := range scores {
-		scoreMap[s.BookID] = s.Score
+		scoreMap[s.BookID] = s
 	}
 
 	// book1: sqrt(16) + sqrt(25) = 4 + 5 = 9
-	if math.Abs(scoreMap[book1.ID]-9.0) > 0.01 {
-		t.Errorf("book1 score: expected 9.0, got %.2f", scoreMap[book1.ID])
+	if math.Abs(scoreMap[book1.ID].Score-9.0) > 0.01 {
+		t.Errorf("book1 score: expected 9.0, got %.2f", scoreMap[book1.ID].Score)
 	}
 	// book2: sqrt(9) = 3
-	if math.Abs(scoreMap[book2.ID]-3.0) > 0.01 {
-		t.Errorf("book2 score: expected 3.0, got %.2f", scoreMap[book2.ID])
+	if math.Abs(scoreMap[book2.ID].Score-3.0) > 0.01 {
+		t.Errorf("book2 score: expected 3.0, got %.2f", scoreMap[book2.ID].Score)
+	}
+
+	// book1 should have 2 vote details (Alice and Bob)
+	book1Votes := scoreMap[book1.ID].Votes
+	if len(book1Votes) != 2 {
+		t.Fatalf("book1: expected 2 vote details, got %d", len(book1Votes))
+	}
+	votesByName := make(map[string]int)
+	for _, v := range book1Votes {
+		votesByName[v.ParticipantName] = v.Credits
+	}
+	if votesByName["Alice"] != 16 {
+		t.Errorf("book1 Alice credits: expected 16, got %d", votesByName["Alice"])
+	}
+	if votesByName["Bob"] != 25 {
+		t.Errorf("book1 Bob credits: expected 25, got %d", votesByName["Bob"])
+	}
+
+	// book2 should have 1 vote detail (Alice only)
+	book2Votes := scoreMap[book2.ID].Votes
+	if len(book2Votes) != 1 {
+		t.Fatalf("book2: expected 1 vote detail, got %d", len(book2Votes))
+	}
+	if book2Votes[0].ParticipantName != "Alice" || book2Votes[0].Credits != 9 {
+		t.Errorf("book2: expected Alice with 9 credits, got %s with %d", book2Votes[0].ParticipantName, book2Votes[0].Credits)
 	}
 }
 

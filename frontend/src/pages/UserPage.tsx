@@ -1,6 +1,13 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Participant, Book, Settings, Vote, BookScore } from "../types";
+import type {
+  Participant,
+  Book,
+  Settings,
+  Vote,
+  BookScore,
+  VoteDetail,
+} from "../types";
 import { BookCard } from "../components/BookCard";
 import { BookEditForm } from "../components/BookEditForm";
 import {
@@ -796,6 +803,7 @@ function VotingSection({
   );
   const [initialized, setInitialized] = useState(false);
   const [expandedBookId, setExpandedBookId] = useState<number | null>(null);
+  const [expandedVotesId, setExpandedVotesId] = useState<number | null>(null);
 
   if (!initialized && myVotes.length > 0) {
     setAllocations(new Map(savedVoteMap));
@@ -914,6 +922,11 @@ function VotingSection({
           const currentCredits = allocations.get(book.id) ?? 0;
           const score = scoreMap.get(book.id);
 
+          const bookVotes: VoteDetail[] = scoreMap.get(book.id)
+            ? (scores.find((s) => s.book_id === book.id)?.votes ?? [])
+            : [];
+          const votesExpanded = expandedVotesId === book.id;
+
           return (
             <li key={book.id} className="px-4 py-3">
               <BookCard
@@ -966,6 +979,33 @@ function VotingSection({
                   )
                 }
               />
+              {isRevealed && bookVotes.length > 0 && (
+                <div className="mt-2">
+                  <button
+                    onClick={() =>
+                      setExpandedVotesId(votesExpanded ? null : book.id)
+                    }
+                    className="text-xs text-stone-500 underline hover:text-stone-700"
+                  >
+                    {votesExpanded ? "hide breakdown" : "breakdown"}
+                  </button>
+                  {votesExpanded && (
+                    <ul className="mt-1 space-y-0.5">
+                      {[...bookVotes]
+                        .sort((a, b) => b.credits - a.credits)
+                        .map((v) => (
+                          <li
+                            key={v.participant_name}
+                            className="flex justify-between text-xs text-stone-500"
+                          >
+                            <span>{v.participant_name}</span>
+                            <span>{v.credits} credits</span>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </li>
           );
         })}
