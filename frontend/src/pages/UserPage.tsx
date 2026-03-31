@@ -277,6 +277,7 @@ function NominationSection({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["books"] });
       queryClient.invalidateQueries({ queryKey: ["backlog"] });
+      queryClient.invalidateQueries({ queryKey: ["votes"] });
     },
   });
 
@@ -801,11 +802,15 @@ function VotingSection({
     setInitialized(true);
   }
 
+  const bookIds = useMemo(() => new Set(books.map((b) => b.id)), [books]);
+
   const totalAllocated = useMemo(() => {
     let sum = 0;
-    for (const v of allocations.values()) sum += v;
+    for (const [bookId, credits] of allocations) {
+      if (bookIds.has(bookId)) sum += credits;
+    }
     return sum;
-  }, [allocations]);
+  }, [allocations, bookIds]);
 
   const remaining = settings.credit_budget - totalAllocated;
 
