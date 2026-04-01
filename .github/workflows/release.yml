@@ -95,6 +95,7 @@ jobs:
     name: Build and push Docker image
     needs: ci
     runs-on: ubuntu-latest
+    environment: release env
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
