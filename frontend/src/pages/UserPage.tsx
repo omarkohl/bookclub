@@ -924,7 +924,10 @@ function VotingSection({
               >
                 {remaining}
               </span>
-              <span className="text-stone-400"> / {settings.credit_budget}</span>
+              <span className="text-stone-400">
+                {" "}
+                / {settings.credit_budget}
+              </span>
             </div>
             {voteMutation.isSuccess && !hasChanges && (
               <span className="text-xs text-green-600">Saved</span>
