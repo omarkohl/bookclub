@@ -63,18 +63,14 @@ export function BookCard({
                       </a>
                     </>
                   )}
-                  {hasMore && (
-                    <span className="ml-1 text-stone-400">less</span>
-                  )}
+                  {hasMore && <span className="ml-1 text-stone-400">less</span>}
                 </>
               ) : (
                 <>
                   {previewText.length > PREVIEW_LENGTH
                     ? previewText.slice(0, PREVIEW_LENGTH) + "…"
                     : previewText}
-                  {hasMore && (
-                    <span className="ml-1 text-stone-400">more</span>
-                  )}
+                  {hasMore && <span className="ml-1 text-stone-400">more</span>}
                 </>
               )}
             </p>
