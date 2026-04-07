@@ -499,7 +499,7 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
                         <button
                           onClick={() => setEditingBookId(book.id)}
                           aria-label={`Edit ${book.title}`}
-                          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+                          className="inline-flex items-center gap-1 rounded-md px-3 py-2.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
                         >
                           <PencilIcon /> Edit
                         </button>
@@ -507,7 +507,7 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
                           onClick={() => moveToBacklogMutation.mutate(book.id)}
                           disabled={moveToBacklogMutation.isPending}
                           aria-label={`Move ${book.title} to backlog`}
-                          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
+                          className="inline-flex items-center gap-1 rounded-md px-3 py-2.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
                         >
                           <ArchiveIcon /> Move to Backlog
                         </button>
@@ -515,7 +515,7 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
                           onClick={() => handleDeleteBook(book.id)}
                           disabled={deleteBookMutation.isPending}
                           aria-label={`Delete ${book.title}`}
-                          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-red-400 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2 disabled:opacity-50"
+                          className="inline-flex items-center gap-1 rounded-md px-3 py-2.5 text-sm text-red-400 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2 disabled:opacity-50"
                         >
                           <TrashIcon /> Delete
                         </button>
@@ -688,14 +688,14 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
                         <button
                           onClick={() => setEditingBookId(book.id)}
                           aria-label={`Edit ${book.title}`}
-                          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+                          className="inline-flex items-center gap-1 rounded-md px-3 py-2.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
                         >
                           <PencilIcon /> Edit
                         </button>
                         <button
                           onClick={() => setNominatingBookId(book.id)}
                           aria-label={`Nominate ${book.title}`}
-                          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+                          className="inline-flex items-center gap-1 rounded-md px-3 py-2.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
                         >
                           <StarIcon /> Nominate
                         </button>
@@ -703,7 +703,7 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
                           onClick={() => handleDeleteBook(book.id)}
                           disabled={deleteBookMutation.isPending}
                           aria-label={`Delete ${book.title}`}
-                          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-red-400 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2 disabled:opacity-50"
+                          className="inline-flex items-center gap-1 rounded-md px-3 py-2.5 text-sm text-red-400 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2 disabled:opacity-50"
                         >
                           <TrashIcon /> Delete
                         </button>

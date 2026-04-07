@@ -336,7 +336,7 @@ function NominationSection({
                     <button
                       onClick={() => setEditing(true)}
                       aria-label="Edit nomination"
-                      className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+                      className="inline-flex items-center gap-1 rounded-md px-3 py-2.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
                     >
                       <PencilIcon /> Edit
                     </button>
@@ -346,7 +346,7 @@ function NominationSection({
                       }
                       disabled={moveToBacklogMutation.isPending}
                       aria-label="Move to backlog"
-                      className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
+                      className="inline-flex items-center gap-1 rounded-md px-3 py-2.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
                     >
                       <ArchiveIcon /> Move to Backlog
                     </button>
@@ -354,7 +354,7 @@ function NominationSection({
                       onClick={() => handleDelete(myNomination.id)}
                       disabled={deleteMutation.isPending}
                       aria-label="Delete nomination"
-                      className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-red-400 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2 disabled:opacity-50"
+                      className="inline-flex items-center gap-1 rounded-md px-3 py-2.5 text-sm text-red-400 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2 disabled:opacity-50"
                     >
                       <TrashIcon /> Delete
                     </button>
@@ -718,7 +718,7 @@ function BacklogSection({
                       <button
                         onClick={() => setEditingId(book.id)}
                         aria-label={`Edit ${book.title}`}
-                        className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+                        className="inline-flex items-center gap-1 rounded-md px-3 py-2.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
                       >
                         <PencilIcon /> Edit
                       </button>
@@ -727,7 +727,7 @@ function BacklogSection({
                           onClick={() => nominateMutation.mutate(book.id)}
                           disabled={nominateMutation.isPending}
                           aria-label={`Nominate ${book.title}`}
-                          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
+                          className="inline-flex items-center gap-1 rounded-md px-3 py-2.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
                         >
                           <StarIcon /> Nominate
                         </button>
@@ -736,7 +736,7 @@ function BacklogSection({
                         onClick={() => handleDelete(book.id)}
                         disabled={deleteMutation.isPending}
                         aria-label={`Delete ${book.title}`}
-                        className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-red-400 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2 disabled:opacity-50"
+                        className="inline-flex items-center gap-1 rounded-md px-3 py-2.5 text-sm text-red-400 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2 disabled:opacity-50"
                       >
                         <TrashIcon /> Delete
                       </button>
