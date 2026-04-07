@@ -431,8 +431,7 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
           <ul className="mt-3 divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
             {participantStats.map((s) => {
               const missingNomination = !s.has_nomination;
-              const noCredits = s.credits_used === 0;
-              const allCredits = s.credits_used >= settings.credit_budget;
+              const creditsRemaining = s.credits_used < settings.credit_budget;
               return (
                 <li
                   key={s.id}
@@ -442,11 +441,9 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
                   <div className="flex items-center gap-3 text-xs">
                     <span
                       className={
-                        noCredits
+                        creditsRemaining
                           ? "font-medium text-amber-600"
-                          : allCredits
-                            ? "text-stone-500"
-                            : "text-stone-500"
+                          : "text-stone-500"
                       }
                     >
                       {s.credits_used}&nbsp;/&nbsp;{settings.credit_budget}{" "}
