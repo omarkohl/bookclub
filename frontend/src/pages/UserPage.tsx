@@ -768,6 +768,7 @@ function VotingSection({
   queryClient: ReturnType<typeof useQueryClient>;
 }) {
   const isRevealed = settings.voting_state === "revealed";
+  const [showAlreadySaved, setShowAlreadySaved] = useState(false);
 
   const { data: myVotes = [] } = useQuery<Vote[]>({
     queryKey: ["votes", participantId],
@@ -882,6 +883,11 @@ function VotingSection({
   }, [allocations, hasChanges, remaining, votePending, castVotes]);
 
   const handleSave = () => {
+    if (!hasChanges) {
+      setShowAlreadySaved(true);
+      setTimeout(() => setShowAlreadySaved(false), 2500);
+      return;
+    }
     const votes: { book_id: number; credits: number }[] = [];
     for (const [bookId, credits] of allocations) {
       if (credits > 0) votes.push({ book_id: bookId, credits });
@@ -1037,11 +1043,15 @@ function VotingSection({
         <div className="mt-4 flex items-center gap-3">
           <button
             onClick={handleSave}
-            disabled={remaining < 0 || voteMutation.isPending || !hasChanges}
-            className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
+            disabled={remaining < 0 || voteMutation.isPending}
+            title={!hasChanges ? "Already saved" : undefined}
+            className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50 ${!hasChanges ? "cursor-default bg-stone-400" : "bg-stone-900 hover:bg-stone-800"}`}
           >
             Save Votes
           </button>
+          {showAlreadySaved && (
+            <span className="text-sm text-stone-500">Already saved</span>
+          )}
           {voteMutation.isError && (
             <p role="alert" className="text-sm text-red-600">
               {voteMutation.error.message}
