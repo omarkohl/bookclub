@@ -452,8 +452,8 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
                     <span
                       className={
                         missingNomination
-                          ? "font-medium text-amber-600"
-                          : "text-stone-500"
+                          ? "w-24 text-right font-medium text-amber-600"
+                          : "w-24 text-right text-stone-500"
                       }
                     >
                       {missingNomination ? "no nomination" : "nominated"}
