@@ -1111,3 +1111,80 @@ func TestScores_IncludesVoteDetails(t *testing.T) {
 		t.Errorf("Bob credits: expected 25, got %d", votesByName["Bob"])
 	}
 }
+
+func TestAdminParticipantStats(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+	base := srv.URL + "/api/testclub/admin/testadmin/"
+	clubBase := srv.URL + "/api/testclub/"
+
+	// Create two participants
+	body := bytes.NewBufferString(`{"name":"Alice"}`)
+	resp, _ := http.Post(base+"participants", "application/json", body)
+	var alice model.Participant
+	json.NewDecoder(resp.Body).Decode(&alice)
+	resp.Body.Close()
+
+	body = bytes.NewBufferString(`{"name":"Bob"}`)
+	resp, _ = http.Post(base+"participants", "application/json", body)
+	var bob model.Participant
+	json.NewDecoder(resp.Body).Decode(&bob)
+	resp.Body.Close()
+
+	// Initially: no credits, no nominations
+	resp, _ = http.Get(base + "participant-stats")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var stats []model.ParticipantStat
+	json.NewDecoder(resp.Body).Decode(&stats)
+	resp.Body.Close()
+	if len(stats) != 2 {
+		t.Fatalf("expected 2 stats, got %d", len(stats))
+	}
+	statsByID := make(map[int]model.ParticipantStat)
+	for _, s := range stats {
+		statsByID[s.ID] = s
+	}
+	if statsByID[alice.ID].CreditsUsed != 0 {
+		t.Errorf("Alice: expected 0 credits, got %d", statsByID[alice.ID].CreditsUsed)
+	}
+	if statsByID[alice.ID].HasNomination {
+		t.Errorf("Alice: expected no nomination")
+	}
+
+	// Alice nominates a book
+	body = bytes.NewBufferString(fmt.Sprintf(`{"title":"Dune","authors":"Herbert","participant_id":%d}`, alice.ID))
+	resp, _ = http.Post(clubBase+"books", "application/json", body)
+	var nominatedBook model.Book
+	json.NewDecoder(resp.Body).Decode(&nominatedBook)
+	resp.Body.Close()
+
+	// Bob votes on Alice's book
+	voteBody := bytes.NewBufferString(fmt.Sprintf(`{"participant_id":%d,"votes":[{"book_id":%d,"credits":25}]}`, bob.ID, nominatedBook.ID))
+	req, _ := http.NewRequest(http.MethodPost, clubBase+"votes", voteBody)
+	req.Header.Set("Content-Type", "application/json")
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+
+	// Re-fetch stats
+	resp, _ = http.Get(base + "participant-stats")
+	json.NewDecoder(resp.Body).Decode(&stats)
+	resp.Body.Close()
+	statsByID = make(map[int]model.ParticipantStat)
+	for _, s := range stats {
+		statsByID[s.ID] = s
+	}
+	if !statsByID[alice.ID].HasNomination {
+		t.Errorf("Alice: expected has_nomination=true")
+	}
+	if statsByID[alice.ID].CreditsUsed != 0 {
+		t.Errorf("Alice: expected 0 credits used, got %d", statsByID[alice.ID].CreditsUsed)
+	}
+	if statsByID[bob.ID].HasNomination {
+		t.Errorf("Bob: expected has_nomination=false")
+	}
+	if statsByID[bob.ID].CreditsUsed != 25 {
+		t.Errorf("Bob: expected 25 credits used, got %d", statsByID[bob.ID].CreditsUsed)
+	}
+}

@@ -652,6 +652,45 @@ func New(db *sql.DB, clubSecret, adminSecret, version, buildDate string) http.Ha
 		writeJSON(w, http.StatusOK, scores)
 	})
 
+	// Admin API: participant stats (credits used, nomination status).
+	mux.HandleFunc(adminPrefix+"participant-stats", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+			return
+		}
+		participants, err := ps.List()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to list participants")
+			return
+		}
+		creditTotals, err := vs.AllTotalCredits()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to get credit totals")
+			return
+		}
+		nominatedBooks, err := bs.ListNominated()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to list nominations")
+			return
+		}
+		nominatorIDs := make(map[int]bool)
+		for _, b := range nominatedBooks {
+			if b.NominatedBy != nil {
+				nominatorIDs[*b.NominatedBy] = true
+			}
+		}
+		stats := make([]model.ParticipantStat, len(participants))
+		for i, p := range participants {
+			stats[i] = model.ParticipantStat{
+				ID:            p.ID,
+				Name:          p.Name,
+				CreditsUsed:   creditTotals[p.ID],
+				HasNomination: nominatorIDs[p.ID],
+			}
+		}
+		writeJSON(w, http.StatusOK, stats)
+	})
+
 	// Admin API: books (all).
 	mux.HandleFunc(adminPrefix+"books", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {

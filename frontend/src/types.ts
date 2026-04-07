@@ -37,3 +37,10 @@ export interface BookScore {
   score: number;
   votes: VoteDetail[];
 }
+
+export interface ParticipantStat {
+  id: number;
+  name: string;
+  credits_used: number;
+  has_nomination: boolean;
+}

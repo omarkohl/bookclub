@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Participant, Book, Settings } from "../types";
+import type { Participant, Book, Settings, ParticipantStat } from "../types";
 import { BookCard } from "../components/BookCard";
 import { BookEditForm } from "../components/BookEditForm";
 import {
@@ -119,6 +119,15 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
     },
   });
 
+  const { data: participantStats = [] } = useQuery<ParticipantStat[]>({
+    queryKey: ["admin", "participant-stats"],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}/participant-stats`);
+      if (!res.ok) throw new Error("Failed to fetch participant stats");
+      return res.json();
+    },
+  });
+
   const createMutation = useMutation({
     mutationFn: async (name: string) => {
       const res = await fetch(`${apiBase}/participants`, {
@@ -164,6 +173,9 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "books"] });
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "participant-stats"],
+      });
     },
   });
 
@@ -176,6 +188,9 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "books"] });
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "participant-stats"],
+      });
     },
   });
 
@@ -233,6 +248,9 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "books"] });
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "participant-stats"],
+      });
       setNominatingBookId(null);
       setNominateUserId(null);
     },
@@ -404,6 +422,50 @@ export function AdminPage({ apiBase }: { apiBase: string }) {
               </div>
             )}
           </div>
+        </section>
+      )}
+
+      {participantStats.length > 0 && settings && (
+        <section className="mt-8">
+          <h2 className="text-lg font-semibold">Status</h2>
+          <ul className="mt-3 divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
+            {participantStats.map((s) => {
+              const missingNomination = !s.has_nomination;
+              const noCredits = s.credits_used === 0;
+              const allCredits = s.credits_used >= settings.credit_budget;
+              return (
+                <li
+                  key={s.id}
+                  className="flex items-center justify-between px-4 py-3"
+                >
+                  <span className="text-sm font-medium">{s.name}</span>
+                  <div className="flex items-center gap-3 text-xs">
+                    <span
+                      className={
+                        noCredits
+                          ? "font-medium text-amber-600"
+                          : allCredits
+                            ? "text-stone-500"
+                            : "text-stone-500"
+                      }
+                    >
+                      {s.credits_used}&nbsp;/&nbsp;{settings.credit_budget}{" "}
+                      credits
+                    </span>
+                    <span
+                      className={
+                        missingNomination
+                          ? "font-medium text-amber-600"
+                          : "text-stone-500"
+                      }
+                    >
+                      {missingNomination ? "no nomination" : "nominated"}
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         </section>
       )}
 

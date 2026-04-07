@@ -172,6 +172,24 @@ func (s *VoteStore) ClearOverBudget(budget int) (int, error) {
 	return len(pids), nil
 }
 
+// AllTotalCredits returns a map of participant_id -> total credits used.
+func (s *VoteStore) AllTotalCredits() (map[int]int, error) {
+	rows, err := s.db.Query("SELECT participant_id, SUM(credits) FROM votes GROUP BY participant_id")
+	if err != nil {
+		return nil, fmt.Errorf("all total credits: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	totals := make(map[int]int)
+	for rows.Next() {
+		var pid, total int
+		if err := rows.Scan(&pid, &total); err != nil {
+			return nil, fmt.Errorf("scan totals: %w", err)
+		}
+		totals[pid] = total
+	}
+	return totals, rows.Err()
+}
+
 // ClearByParticipant deletes all votes for a participant.
 func (s *VoteStore) ClearByParticipant(participantID int) error {
 	_, err := s.db.Exec("DELETE FROM votes WHERE participant_id = ?", participantID)

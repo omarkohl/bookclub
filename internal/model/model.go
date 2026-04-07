@@ -43,3 +43,11 @@ type BookScore struct {
 	Score  float64      `json:"score"`
 	Votes  []VoteDetail `json:"votes"`
 }
+
+// ParticipantStat holds a participant's activity summary for the admin view.
+type ParticipantStat struct {
+	ID            int    `json:"id"`
+	Name          string `json:"name"`
+	CreditsUsed   int    `json:"credits_used"`
+	HasNomination bool   `json:"has_nomination"`
+}
