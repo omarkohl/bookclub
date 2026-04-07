@@ -354,7 +354,7 @@ function NominationSection({
                       onClick={() => handleDelete(myNomination.id)}
                       disabled={deleteMutation.isPending}
                       aria-label="Delete nomination"
-                      className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 disabled:opacity-50"
+                      className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-red-400 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2 disabled:opacity-50"
                     >
                       <TrashIcon /> Delete
                     </button>
@@ -736,7 +736,7 @@ function BacklogSection({
                         onClick={() => handleDelete(book.id)}
                         disabled={deleteMutation.isPending}
                         aria-label={`Delete ${book.title}`}
-                        className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 disabled:opacity-50"
+                        className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-red-400 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2 disabled:opacity-50"
                       >
                         <TrashIcon /> Delete
                       </button>
