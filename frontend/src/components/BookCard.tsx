@@ -40,7 +40,10 @@ export function BookCard({
           </p>
         ) : (
           previewText && (
-            <p className="mt-2 text-sm text-stone-600">
+            <p
+              className={`mt-2 text-sm text-stone-600${hasMore ? " cursor-pointer" : ""}`}
+              onClick={hasMore ? onToggle : undefined}
+            >
               {expanded ? (
                 <>
                   {book.description && (
