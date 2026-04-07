@@ -870,6 +870,17 @@ function VotingSection({
     }
   }, [voteMutation.isSuccess, voteMutation.reset]);
 
+  const { mutate: castVotes, isPending: votePending } = voteMutation;
+  useEffect(() => {
+    if (!hasChanges || remaining < 0 || votePending) return;
+    const votes: { book_id: number; credits: number }[] = [];
+    for (const [bookId, credits] of allocations) {
+      if (credits > 0) votes.push({ book_id: bookId, credits });
+    }
+    const timer = setTimeout(() => castVotes(votes), 1000);
+    return () => clearTimeout(timer);
+  }, [allocations, hasChanges, remaining, votePending, castVotes]);
+
   const handleSave = () => {
     const votes: { book_id: number; credits: number }[] = [];
     for (const [bookId, credits] of allocations) {
@@ -904,15 +915,23 @@ function VotingSection({
           {isRevealed ? "Results" : "Vote"}
         </h2>
         {!isRevealed && (
-          <div className="text-sm">
-            <span className="text-stone-500">Remaining: </span>
-            <span
-              className={`font-semibold ${remaining < 0 ? "text-red-600" : "text-stone-900"}`}
-              data-testid="remaining-credits"
-            >
-              {remaining}
-            </span>
-            <span className="text-stone-400"> / {settings.credit_budget}</span>
+          <div className="flex items-center gap-3 text-sm">
+            <div>
+              <span className="text-stone-500">Remaining: </span>
+              <span
+                className={`font-semibold ${remaining < 0 ? "text-red-600" : "text-stone-900"}`}
+                data-testid="remaining-credits"
+              >
+                {remaining}
+              </span>
+              <span className="text-stone-400"> / {settings.credit_budget}</span>
+            </div>
+            {voteMutation.isSuccess && !hasChanges && (
+              <span className="text-xs text-green-600">Saved</span>
+            )}
+            {voteMutation.isPending && (
+              <span className="text-xs text-stone-400">Saving...</span>
+            )}
           </div>
         )}
       </div>
@@ -1018,15 +1037,12 @@ function VotingSection({
             disabled={remaining < 0 || voteMutation.isPending || !hasChanges}
             className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 disabled:opacity-50"
           >
-            {voteMutation.isPending ? "Saving..." : "Save Votes"}
+            Save Votes
           </button>
           {voteMutation.isError && (
             <p role="alert" className="text-sm text-red-600">
               {voteMutation.error.message}
             </p>
-          )}
-          {voteMutation.isSuccess && !hasChanges && (
-            <p className="text-sm text-green-600">Votes saved!</p>
           )}
         </div>
       )}
