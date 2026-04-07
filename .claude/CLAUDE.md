@@ -38,7 +38,7 @@
 
 ## Pre-commit
 
-Before committing, always run:
-1. Linting
-2. Formatting check
-3. All tests
+Before committing, always run from the project root:
+```
+make lint && make fmt-check && make test
+```
