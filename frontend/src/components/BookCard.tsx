@@ -40,10 +40,7 @@ export function BookCard({
           </p>
         ) : (
           previewText && (
-            <p
-              className={`mt-2 text-sm text-stone-600${hasMore ? " cursor-pointer" : ""}`}
-              onClick={hasMore ? onToggle : undefined}
-            >
+            <p className="mt-2 text-sm text-stone-600">
               {expanded ? (
                 <>
                   {book.description && (
@@ -63,14 +60,36 @@ export function BookCard({
                       </a>
                     </>
                   )}
-                  {hasMore && <span className="ml-1 text-stone-400">less</span>}
+                  {hasMore && (
+                    <button
+                      type="button"
+                      className="ml-1 text-stone-400"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggle();
+                      }}
+                    >
+                      less
+                    </button>
+                  )}
                 </>
               ) : (
                 <>
                   {previewText.length > PREVIEW_LENGTH
                     ? previewText.slice(0, PREVIEW_LENGTH) + "…"
                     : previewText}
-                  {hasMore && <span className="ml-1 text-stone-400">more</span>}
+                  {hasMore && (
+                    <button
+                      type="button"
+                      className="ml-1 text-stone-400"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggle();
+                      }}
+                    >
+                      more
+                    </button>
+                  )}
                 </>
               )}
             </p>

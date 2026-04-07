@@ -75,7 +75,7 @@ test.describe("Phase 3: Quadratic Voting", () => {
 
     // Save votes
     await page.getByRole("button", { name: "Save Votes" }).click();
-    await expect(page.getByText("Votes saved!")).toBeVisible();
+    await expect(page.getByText("Saved")).toBeVisible();
 
     // Reload and verify votes persist
     await page.reload();

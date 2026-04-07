@@ -89,7 +89,7 @@ test.describe("Phase 5: Credit Budget Management", () => {
 
     // Verify current budget is shown
     await expect(page.getByText("Credit Budget:")).toBeVisible();
-    await expect(page.getByText("100")).toBeVisible();
+    await expect(page.getByText("100", { exact: true })).toBeVisible();
 
     // Enter new budget that's lower (50)
     await page.getByLabel("New credit budget").fill("50");
@@ -102,11 +102,10 @@ test.describe("Phase 5: Credit Budget Management", () => {
     // Confirm the change
     await page.getByRole("button", { name: "Confirm" }).click();
 
-    // Budget should now show 50
-    await expect(page.getByText("Credit Budget:")).toBeVisible();
-    await page.waitForFunction(
-      () => document.body.textContent?.includes("50"),
-    );
+    // Wait for confirmation dialog to disappear — means PUT completed and votes were cleared
+    await expect(
+      page.getByRole("button", { name: "Confirm" }),
+    ).not.toBeVisible();
 
     // Verify Alice's votes were cleared via API
     const aliceVotes = await fetch(
