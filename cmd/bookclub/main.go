@@ -10,6 +10,12 @@ import (
 	"github.com/omar/bookclub/internal/store"
 )
 
+// Injected at build time via -ldflags.
+var (
+	Version   = "dev"
+	BuildDate = "unknown"
+)
+
 func main() {
 	port := envOr("BOOKCLUB_PORT", "8080")
 	clubSecret := envOr("BOOKCLUB_CLUB_SECRET", "club")
@@ -22,7 +28,7 @@ func main() {
 	}
 	defer func() { _ = db.Close() }()
 
-	h := handler.New(db, clubSecret, adminSecret)
+	h := handler.New(db, clubSecret, adminSecret, Version, BuildDate)
 
 	addr := fmt.Sprintf(":%s", port)
 	log.Printf("listening on %s (club=/%s/ admin=/%s/admin/%s/)", addr, clubSecret, clubSecret, adminSecret)

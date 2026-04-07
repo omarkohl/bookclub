@@ -3,6 +3,9 @@
 help: ## Show available targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
+GIT_VERSION := $(shell git describe --tags --always --dirty 2>/dev/null | sed 's/^v//' | sed 's/-[0-9]*-g\([a-f0-9]*\)/-dev+\1/' || echo "dev")
+BUILD_DATE  := $(shell date -u +%Y-%m-%d)
+
 build: build-frontend build-backend ## Build everything (frontend + Go binary)
 
 build-frontend: ## Build frontend with Vite
@@ -11,7 +14,7 @@ build-frontend: ## Build frontend with Vite
 build-backend: build-frontend ## Build Go binary with embedded frontend
 	mkdir -p internal/handler/frontend
 	cp -r frontend/dist/* internal/handler/frontend/
-	go build -o bin/bookclub ./cmd/bookclub
+	go build -ldflags="-X 'main.Version=$(GIT_VERSION)' -X 'main.BuildDate=$(BUILD_DATE)'" -o bin/bookclub ./cmd/bookclub
 
 lint: lint-frontend lint-backend ## Run all linters
 

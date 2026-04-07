@@ -25,7 +25,7 @@ func setupTestServer(t *testing.T) *httptest.Server {
 	}
 	t.Cleanup(func() { db.Close() })
 
-	h := handler.New(db, "testclub", "testadmin")
+	h := handler.New(db, "testclub", "testadmin", "test", "2000-01-01")
 	return httptest.NewServer(h)
 }
 

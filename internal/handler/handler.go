@@ -41,13 +41,21 @@ func parseIDFromPath(path, prefix string) (int, bool) {
 var Static embed.FS
 
 // New creates the root HTTP handler with API routes and SPA serving.
-func New(db *sql.DB, clubSecret, adminSecret string) http.Handler {
+func New(db *sql.DB, clubSecret, adminSecret, version, buildDate string) http.Handler {
 	mux := http.NewServeMux()
 
 	ps := store.NewParticipantStore(db)
 	ss := store.NewSettingsStore(db)
 	bs := store.NewBookStore(db)
 	vs := store.NewVoteStore(db)
+
+	// Public version endpoint.
+	mux.HandleFunc("/api/version", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]string{
+			"version": version,
+			"date":    buildDate,
+		})
+	})
 
 	// API routes.
 	apiPrefix := "/api/" + clubSecret + "/"
