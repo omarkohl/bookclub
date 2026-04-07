@@ -81,7 +81,7 @@ export function UserPage({ apiBase }: { apiBase: string }) {
     localStorage.setItem(STORAGE_KEY, String(id));
   };
 
-  const handleSwitch = () => {
+  const handleLogout = () => {
     setSelectedId(null);
     localStorage.removeItem(STORAGE_KEY);
   };
@@ -139,10 +139,10 @@ export function UserPage({ apiBase }: { apiBase: string }) {
             {selectedParticipant.name}
           </span>
           <button
-            onClick={handleSwitch}
+            onClick={handleLogout}
             className="rounded-md px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
           >
-            Switch
+            Logout
           </button>
         </div>
       </div>
