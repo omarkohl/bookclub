@@ -32,3 +32,9 @@ updates:
       all-dependencies:
         patterns:
           - "*"
+    ignore:
+      # eslint-plugin-react not yet compatible with eslint 10 (issue #19)
+      - dependency-name: "eslint"
+        versions: [">= 10"]
+      - dependency-name: "@eslint/js"
+        versions: [">= 10"]
