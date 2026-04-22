@@ -1,4 +1,4 @@
-# Development Guide
+# Contributing
 
 ## Prerequisites
 
@@ -94,7 +94,7 @@ go run ./cmd/seed -base-url http://localhost:9090 -club myclub -admin myadmin
 
 ## Releasing
 
-Push a version tag to trigger the [release workflow](../.github/workflows/release.yml):
+Push a version tag to trigger the [release workflow](.github/workflows/release.yml):
 
 ```sh
 git tag v1.2.3
@@ -119,5 +119,5 @@ internal/
   model/            Shared types
   migrations/       SQL migration files
 frontend/           React + Vite app
-docs/               Design doc + this guide
+docs/               Design doc
 ```

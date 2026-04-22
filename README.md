@@ -71,4 +71,4 @@ The secrets form the URLs — pick something unguessable. There is no login page
 
 ## Development
 
-See [docs/dev.md](docs/dev.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md).
