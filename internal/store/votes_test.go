@@ -1,8 +1,10 @@
 package store_test
 
 import (
+	"context"
 	"database/sql"
 	"math"
+	"path/filepath"
 	"testing"
 
 	"github.com/omar/bookclub/internal/model"
@@ -214,6 +216,52 @@ func TestVoteStore_CascadeOnBookDelete(t *testing.T) {
 	votes, _ := vs.GetByParticipant(alice.ID)
 	if len(votes) != 0 {
 		t.Errorf("expected 0 votes after book delete, got %d", len(votes))
+	}
+}
+
+// TestBookDelete_ReleasesVotedCredits reproduces the production bug where deleting
+// a nominated book left orphaned votes, causing participants to appear over-budget.
+//
+// The bug: ON DELETE CASCADE only fires if foreign_keys=ON is set on the connection
+// doing the DELETE. db.Exec() sets it on one connection, but under concurrent load
+// the pool creates fresh connections that don't inherit it.
+//
+// To reproduce: hold the pragma-initialized connection so the DELETE is forced onto
+// a fresh pool connection. Without the fix, cascade silently does nothing and the
+// participant's credits appear permanently spent.
+func TestBookDelete_ReleasesVotedCredits(t *testing.T) {
+	dir := t.TempDir()
+	db, err := store.New(filepath.Join(dir, "test.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	bs := store.NewBookStore(db)
+	vs := store.NewVoteStore(db)
+	alice := createTestParticipant(t, db, "Alice")
+	book := createTestBook(t, db, "Dune", &alice.ID)
+	if err := vs.Set(alice.ID, []model.Vote{{BookID: book.ID, Credits: 25}}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Hold the pragma-initialized connection to force the DELETE onto a fresh one.
+	held, err := db.Conn(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := bs.Delete(book.ID); err != nil {
+		held.Close()
+		t.Fatal(err)
+	}
+	held.Close()
+
+	spent, err := vs.TotalCredits(alice.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spent != 0 {
+		t.Errorf("participant has %d spent credits after their nominated book was deleted; want 0", spent)
 	}
 }
 

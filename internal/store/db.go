@@ -15,23 +15,13 @@ import (
 
 // New opens a SQLite database and runs all pending migrations.
 func New(dbPath string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite", dbPath)
+	// Embed PRAGMAs in the DSN so the driver applies them to every new connection.
+	// db.Exec() only sets pragmas on one connection; with a pool, other connections
+	// would miss them — e.g. foreign_keys=OFF silently breaks ON DELETE CASCADE.
+	dsn := dbPath + "?_pragma=foreign_keys(ON)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=synchronous(NORMAL)"
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
-	}
-
-	// Set recommended PRAGMAs for SQLite.
-	pragmas := []string{
-		"PRAGMA journal_mode=WAL",
-		"PRAGMA busy_timeout=5000",
-		"PRAGMA synchronous=NORMAL",
-		"PRAGMA foreign_keys=ON",
-	}
-	for _, p := range pragmas {
-		if _, err := db.Exec(p); err != nil {
-			_ = db.Close()
-			return nil, fmt.Errorf("exec pragma %q: %w", p, err)
-		}
 	}
 
 	if err := migrate(db); err != nil {
