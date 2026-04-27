@@ -92,6 +92,23 @@ Custom server or secrets:
 go run ./cmd/seed -base-url http://localhost:9090 -club myclub -admin myadmin
 ```
 
+## Inspecting the Database
+
+The runtime Docker image has no `sqlite3` binary. Copy the DB out first — you must grab all three WAL files or the copy will appear empty:
+
+```sh
+docker compose cp bookclub:/data/bookclub.db /tmp/bookclub.db
+docker compose cp bookclub:/data/bookclub.db-wal /tmp/bookclub.db-wal
+docker compose cp bookclub:/data/bookclub.db-shm /tmp/bookclub.db-shm
+sqlite3 /tmp/bookclub.db
+```
+
+Alternatively, install `sqlite3` in a throwaway shell:
+
+```sh
+docker compose exec bookclub sh -c "apk add --no-cache sqlite && sqlite3 /data/bookclub.db"
+```
+
 ## Releasing
 
 Push a version tag to trigger the [release workflow](.github/workflows/release.yml):
