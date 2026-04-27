@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-04-27
+
+### Fixed
+
+- Votes on a deleted book were not removed, causing participants to appear over-budget and unable to vote
+
 ## [0.3.0] - 2026-04-22
 
 ### Fixed
@@ -45,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker image with multi-stage build; SQLite database on a persistent volume
 - Binaries published for Linux, macOS, and Windows (amd64 and arm64)
 
+[0.4.0]: https://github.com/omarkohl/bookclub/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/omarkohl/bookclub/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/omarkohl/bookclub/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/omarkohl/bookclub/releases/tag/v0.1.0
