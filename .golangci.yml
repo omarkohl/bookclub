@@ -2,6 +2,8 @@ version: "2"
 
 linters:
   exclusions:
+    paths:
+      - frontend
     rules:
       - path: _test\.go
         linters:
