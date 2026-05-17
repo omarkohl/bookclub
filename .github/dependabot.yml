@@ -10,6 +10,8 @@ updates:
       all-dependencies:
         patterns:
           - "*"
+    assignees:
+      - "omarkohl"
 
   - package-ecosystem: gomod
     directory: /
@@ -21,6 +23,8 @@ updates:
       all-dependencies:
         patterns:
           - "*"
+    assignees:
+      - "omarkohl"
 
   - package-ecosystem: npm
     directory: /frontend
@@ -38,3 +42,5 @@ updates:
         versions: [">= 10"]
       - dependency-name: "@eslint/js"
         versions: [">= 10"]
+    assignees:
+      - "omarkohl"
