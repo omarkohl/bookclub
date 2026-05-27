@@ -41,7 +41,7 @@ jobs:
         run: mkdir -p internal/handler/frontend && echo '<!DOCTYPE html>' > internal/handler/frontend/index.html
 
       - name: Lint backend
-        uses: golangci/golangci-lint-action@v9
+        uses: golangci/golangci-lint-action@v9.2.0
         with:
           version: latest
 
