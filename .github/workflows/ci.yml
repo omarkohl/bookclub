@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       - uses: actions/setup-node@v6.4.0
         with:
@@ -41,7 +41,7 @@ jobs:
         run: mkdir -p internal/handler/frontend && echo '<!DOCTYPE html>' > internal/handler/frontend/index.html
 
       - name: Lint backend
-        uses: golangci/golangci-lint-action@v9.2.0
+        uses: golangci/golangci-lint-action@v9.2.1
         with:
           version: latest
 
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       - uses: actions/setup-node@v6.4.0
         with:
@@ -73,7 +73,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       - uses: actions/setup-node@v6.4.0
         with:
