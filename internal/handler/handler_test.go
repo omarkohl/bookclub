@@ -1188,3 +1188,37 @@ func TestAdminParticipantStats(t *testing.T) {
 		t.Errorf("Bob: expected 25 credits used, got %d", statsByID[bob.ID].CreditsUsed)
 	}
 }
+
+// A client with a stale book list may still send votes for a book that was
+// deleted or moved to the backlog. That is a client error, not a server error.
+func TestUserVotes_RejectsBookNotNominated(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+	admin := srv.URL + "/api/testclub/admin/testadmin/"
+	user := srv.URL + "/api/testclub/"
+
+	alice := createParticipant(t, admin, "Alice")
+	body := bytes.NewBufferString(fmt.Sprintf(
+		`{"title":"Dune","authors":"Frank Herbert","participant_id":%d}`, alice.ID))
+	resp, _ := http.Post(user+"books", "application/json", body)
+	var book model.Book
+	json.NewDecoder(resp.Body).Decode(&book)
+	resp.Body.Close()
+
+	req, _ := http.NewRequest(http.MethodPost,
+		fmt.Sprintf("%sbooks/%d/move-to-backlog", admin, book.ID), nil)
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+
+	for name, bookID := range map[string]int{"backlog": book.ID, "deleted": 9999} {
+		t.Run(name, func(t *testing.T) {
+			body := bytes.NewBufferString(fmt.Sprintf(
+				`{"participant_id":%d,"votes":[{"book_id":%d,"credits":10}]}`, alice.ID, bookID))
+			resp, _ := http.Post(user+"votes", "application/json", body)
+			resp.Body.Close()
+			if resp.StatusCode != http.StatusBadRequest {
+				t.Errorf("expected 400, got %d", resp.StatusCode)
+			}
+		})
+	}
+}

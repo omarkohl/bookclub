@@ -612,6 +612,21 @@ func New(db *sql.DB, clubSecret, adminSecret, version, buildDate string) http.Ha
 				writeError(w, http.StatusBadRequest, "total credits exceed budget")
 				return
 			}
+			nominated, err := bs.ListNominated()
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to list books")
+				return
+			}
+			nominatedIDs := make(map[int]bool, len(nominated))
+			for _, b := range nominated {
+				nominatedIDs[b.ID] = true
+			}
+			for _, v := range req.Votes {
+				if v.Credits > 0 && !nominatedIDs[v.BookID] {
+					writeError(w, http.StatusBadRequest, "votes include a book that is no longer nominated; reload the page")
+					return
+				}
+			}
 			if err := vs.Set(req.ParticipantID, req.Votes); err != nil {
 				writeError(w, http.StatusInternalServerError, "failed to save votes")
 				return
