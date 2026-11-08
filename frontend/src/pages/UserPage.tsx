@@ -813,23 +813,25 @@ function VotingSection({
 
   const bookIds = useMemo(() => new Set(books.map((b) => b.id)), [books]);
 
-  const totalAllocated = useMemo(() => {
-    let sum = 0;
-    for (const [bookId, credits] of allocations) {
-      if (bookIds.has(bookId)) sum += credits;
-    }
-    return sum;
-  }, [allocations, bookIds]);
+  // Allocations can outlive their book (e.g. a nomination deleted mid-session);
+  // those must not count against the budget or be sent to the server.
+  const liveVotes = useMemo(
+    () =>
+      [...allocations]
+        .filter(([bookId, credits]) => credits > 0 && bookIds.has(bookId))
+        .map(([book_id, credits]) => ({ book_id, credits })),
+    [allocations, bookIds],
+  );
+
+  const totalAllocated = liveVotes.reduce((sum, v) => sum + v.credits, 0);
 
   const remaining = settings.credit_budget - totalAllocated;
 
   const hasChanges = useMemo(() => {
-    if (allocations.size !== savedVoteMap.size) return true;
-    for (const [bookId, credits] of allocations) {
-      if (savedVoteMap.get(bookId) !== credits) return true;
-    }
-    return false;
-  }, [allocations, savedVoteMap]);
+    const savedLive = [...savedVoteMap.keys()].filter((id) => bookIds.has(id));
+    if (liveVotes.length !== savedLive.length) return true;
+    return liveVotes.some((v) => savedVoteMap.get(v.book_id) !== v.credits);
+  }, [liveVotes, savedVoteMap, bookIds]);
 
   const setCredits = useCallback((bookId: number, credits: number) => {
     setAllocations((prev) => {
@@ -874,13 +876,9 @@ function VotingSection({
   const { mutate: castVotes, isPending: votePending } = voteMutation;
   useEffect(() => {
     if (!hasChanges || remaining < 0 || votePending) return;
-    const votes: { book_id: number; credits: number }[] = [];
-    for (const [bookId, credits] of allocations) {
-      if (credits > 0) votes.push({ book_id: bookId, credits });
-    }
-    const timer = setTimeout(() => castVotes(votes), 1000);
+    const timer = setTimeout(() => castVotes(liveVotes), 1000);
     return () => clearTimeout(timer);
-  }, [allocations, hasChanges, remaining, votePending, castVotes]);
+  }, [liveVotes, hasChanges, remaining, votePending, castVotes]);
 
   const handleSave = () => {
     if (!hasChanges) {
@@ -888,11 +886,7 @@ function VotingSection({
       setTimeout(() => setShowAlreadySaved(false), 2500);
       return;
     }
-    const votes: { book_id: number; credits: number }[] = [];
-    for (const [bookId, credits] of allocations) {
-      if (credits > 0) votes.push({ book_id: bookId, credits });
-    }
-    voteMutation.mutate(votes);
+    voteMutation.mutate(liveVotes);
   };
 
   const participantMap = useMemo(() => {
